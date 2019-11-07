@@ -1,10 +1,8 @@
 const {Client} = require('minio');
 const uuid = require('uuid/v4');
-const winston = require('winston');
+const {Logger} = require('./utils');
 
-const log = winston.createLogger({
-    defaultMeta: {tag: 'file-service'}
-});
+const log = Logger({tag:'file-service'});
 
 class FileService  {
     constructor(props){
@@ -16,18 +14,22 @@ class FileService  {
         });
         this.fs.bucketExists(props.bucketName, (err, exists)=>{
             if(err) {
-                log.error(`check bucket ${props.bucketName} failed because: $err`);
+                log.error('check bucket failed', {bucketName: props.bucketName, error: err});
                 throw err;
             }
 
+
             if(!exists){
+                log.info(`bucket ${props.bucketName} not exists, to create it`);
                 this.fs.makeBucket(props.bucketName, err=>{
                     if(err){
-                        log.error(`crate bucket ${props.bucketName} failed because: $err`);
+                        log.error('crate bucket failed', {bucketName: this.props.bucketName, error: err});
                         throw err;
                     }
                 });
             }
+
+            log.info(`bucket ${props.bucketName} exists`);
         });
     }
 

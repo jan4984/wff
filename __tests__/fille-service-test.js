@@ -45,6 +45,7 @@ describe('__tests__ file service', ()=>{
         await fs.del(id);
 
         await fs.get(id).then(()=>{
+            //should not run success
             expect(false).toBe('true');
         }).catch(err=>{
             //not found
