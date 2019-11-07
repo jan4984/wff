@@ -20,7 +20,7 @@ describe('__tests__ file service', ()=>{
     });
 
     afterAll(async ()=>{
-        fs.clear();
+        await fs.clear();
     });
 
     it('write get delete', async ()=>{
