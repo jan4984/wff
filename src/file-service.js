@@ -12,25 +12,16 @@ class FileService  {
             endPoint, port, accessKey, secretKey,
             useSSL: false,
         });
-        this.fs.bucketExists(props.bucketName, (err, exists)=>{
-            if(err) {
-                log.error('check bucket failed', {bucketName: props.bucketName, error: err});
-                throw err;
-            }
+    }
 
-
-            if(!exists){
-                log.info(`bucket ${props.bucketName} not exists, to create it`);
-                this.fs.makeBucket(props.bucketName, err=>{
-                    if(err){
-                        log.error('crate bucket failed', {bucketName: this.props.bucketName, error: err});
-                        throw err;
-                    }
-                });
-            }
-
-            log.info(`bucket ${props.bucketName} exists`);
-        });
+    async init(){
+        const exists = await this.fs.bucketExists(this.props.bucketName);
+        if(!exists) {
+            log.info(`bucket ${this.props.bucketName} not exists, to create it`);
+            await this.fs.makeBucket(this.props.bucketName);
+        }else{
+            log.info(`bucket ${this.props.bucketName} exists`);
+        }
     }
 
     async upload(name, stream){
