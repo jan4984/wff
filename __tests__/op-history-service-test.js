@@ -44,7 +44,9 @@ describe('operation history service works', ()=>{
         await db.close();
     });
 
-    it('add query', async ()=>{
+    //TODO: test addOperation()
+
+    it('query', async ()=>{
         const op1 = await DBService.models.OP.create({
             workflowServiceTask:'ST_0001',
             operationData:JSON.stringify({text:"hello"}),

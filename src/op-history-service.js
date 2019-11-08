@@ -9,7 +9,7 @@ class OperationHistoryService {
         this.props = props;
     }
 
-    async addOperation(serviceTask, data, userId, wfiId){
+    async addOperation(serviceTask, fileList, data, userId, wfiId){
         if(!serviceTask || typeof serviceTask != 'string'){
             throw 'service task not a string';
         }
@@ -19,15 +19,29 @@ class OperationHistoryService {
         if(!userId || !wfiId){
             throw 'operation must have a user and workflow instance';
         }
-
-        const created = DBSerivce.models.OP.create({
-            workflowServiceTask: serviceTask,
-            operationData:JSON.stringify({data}),
-            userId: userId,
-            workflowInstanceId:wfiId,
+        if(!fileList) {
+            fileList = [];
+        }
+        const record = await DBSerivce.get().transaction(t=> {
+            return DBSerivce.models.File.update({
+                where:{
+                    id: {
+                        [Op.or]: fileList
+                    },
+                    workflowInstanceId: wfiId
+                }
+            }).then(()=>DBSerivce.models.OP.create({
+                workflowServiceTask: serviceTask,
+                operationData: JSON.stringify({data}),
+                userId: userId,
+                workflowInstanceId: wfiId,
+            })).catch(err=>{
+                log.error(`add operation failed:${err}`);
+                return Promise.resolve({id:''});
+            });
         });
 
-        return created;
+        return record.id;
     }
 
     async findOperationByWorkflowId(wfiId, userId){
@@ -47,6 +61,20 @@ class OperationHistoryService {
             ]
         });
         return ops;
+    }
+
+    async clearUnattachedFile(wfiId){
+        if(!wfiId){
+            throw 'no workflow instance specified';
+        }
+
+        const removedCount = await DBSerivce.models.File.destroy({
+            where:{
+                [Op.and]:[{workflowInstanceId:wfiId}, {attached: false}]
+            }
+        });
+
+        return removedCount;
     }
 
     async findOperationByUserId(userId, wfiId){

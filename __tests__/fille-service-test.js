@@ -1,3 +1,4 @@
+const DBService = require('../src/db-service');
 const {FileService} = require('../src/file-service');
 const FS = require('fs');
 
@@ -9,23 +10,37 @@ const config = {
     secretKey: process.env['MINIO_SECRET_KEY'] || "SECRET_KEY",
 };
 
-const testFilePath = 'package.json';
+const dbConfig = {
+    host:process.env['DB_HOST'] || 'localhost',
+    port:process.env['DB_PORT'] || 5432,
+    database:process.env['DB_DATABASE'] || 'test',
+    username: process.env['DB_USER'] || 'postgres',
+    password: process.env['DB_PASSWORD'] || "postgres",
+    test: true
+};
 
+const testFilePath = 'package.json';
+const wfiId = '_test_wfid_';
 let fs;
 
 describe('__tests__ file service', ()=>{
     beforeAll(async ()=>{
+        await DBService.get(dbConfig);
+        await DBService.models.WFI.create({
+            id:wfiId
+        });
         fs = new FileService(config);
         await fs.init();
     });
 
     afterAll(async ()=>{
         await fs.clear();
+        await DBService.get().close();
     });
 
     it('write get delete', async ()=>{
         const content = FS.readFileSync(testFilePath, {encoding:'utf-8'});
-        const id = await fs.upload('myfile', FS.createReadStream(testFilePath));
+        const id = await fs.upload('myfile', FS.createReadStream(testFilePath), wfiId);
         const got = await fs.get(id);
         expect(got.id).toBe(id);
         expect(got.name).toBe('myfile');
@@ -44,6 +59,10 @@ describe('__tests__ file service', ()=>{
         });
         await getDone;
         await fs.del(id);
+
+        const dbItem = await DBService.models.File.findByPk(id);
+        expect(dbItem.id).toEqual(id);
+        expect(dbItem.workflowInstanceId).toEqual(wfiId);
 
         await fs.get(id).then(()=>{
             //should not run success

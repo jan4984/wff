@@ -14,6 +14,10 @@ class WFI extends Model{
 
 }
 
+class File extends Model{
+
+}
+
 async function get(props){
     if(db) return db;
     db = new Sequelize(props.database, props.username, props.password, {
@@ -42,9 +46,18 @@ async function get(props){
         sequelize:db,
         modelName:'workflowInstance'
     });
+    File.init({
+        id:{type:DataTypes.STRING, primaryKey:true},
+        attached:{type:DataTypes.BOOLEAN, allowNull:false}
+    }, {
+        sequelize:db,
+        modelName:'file'
+    })
 
     User.hasMany(OP);
     WFI.hasMany(OP);
+    WFI.hasMany(File);
+    File.belongsTo(WFI);
 
     OP.belongsTo(User);
     OP.belongsTo(WFI);
@@ -66,5 +79,5 @@ async function dropAll(){
 
 module.exports = {
     get,dropAll,
-    models:{User, OP, WFI}
+    models:{User, OP, WFI, File}
 };

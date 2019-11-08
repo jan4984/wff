@@ -1,6 +1,8 @@
 const {Client} = require('minio');
+const {ActsWithRollback} = require('./utils');
 const uuid = require('uuid/v4');
 const {Logger} = require('./utils');
+const DBService = require('./db-service');
 
 const log = Logger({tag:'file-service'});
 
@@ -24,9 +26,37 @@ class FileService  {
         }
     }
 
-    async upload(name, stream){
+    async upload(name, stream, wfiId) {
+        if (!name || typeof (name) !== 'string') {
+            throw 'name is not a string';
+        }
+        if (!stream) {
+            throw 'stream not provided';
+        }
+        if (!wfiId || typeof (wfiId) !== 'string') {
+            throw 'workflow instance not specified'
+        }
         const id = uuid();
-        await this.fs.putObject(this.props.bucketName, id, stream, {filename:name});
+        const save = [
+            this.fs.putObject(this.props.bucketName, id, stream, {filename: name}),
+            this.fs.removeObject(this.props.bucketName, id),
+        ];
+        const record = [
+            DBService.models.File.create({
+                id: id,
+                workflowInstanceId: wfiId,
+                attached: false
+            }),
+            DBService.models.File.destroy({
+                where:{
+                    id: id
+                }}),
+        ];
+        try{
+            await ActsWithRollback([save, record]);
+        }catch (err){
+            return '';
+        }
         return id;
     }
 
