@@ -57,7 +57,14 @@ async function get(props){
     return db;
 }
 
+async function dropAll(){
+    if(!db) return;
+    await OP.drop();
+    await WFI.drop();
+    await User.drop();
+}
+
 module.exports = {
-    get,
+    get,dropAll,
     models:{User, OP, WFI}
 };

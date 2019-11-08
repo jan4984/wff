@@ -18,6 +18,7 @@ describe('db works', ()=>{
         db = await DBService.get(config);
     });
     afterAll(async ()=>{
+        await DBService.dropAll();
         await db.close();
     });
     it('create user and wfi', async ()=>{
