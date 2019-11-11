@@ -66,7 +66,7 @@ async function get(props){
     User.belongsToMany(WFI, {through:'WorkflowInstanceUser'});
 
     await db.authenticate();
-    await db.sync({force:!!props.test});
+    await db.sync();//{force:!!props.test});
     return db;
 }
 

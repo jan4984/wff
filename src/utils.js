@@ -32,7 +32,7 @@ function ActsWithRollback(ars) {
         log.info(`submit rollback ${i}`);
         const rollback = ars[i][1];
         return normalizeAct(rollback).then(undefined, err => {
-                log.error(`rollback error: ${err}`);//why rollback fail??
+                log.error(`rollback error ignored: ${err}`);//why rollback fail??
             });
     }));
 

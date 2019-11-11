@@ -6,6 +6,15 @@ const DBService = require('./db-service');
 
 const log = Logger({tag:'file-service'});
 
+let fs;
+
+async function get(props){
+    if(fs) return fs;
+    fs = new FileService(props);
+    await fs.init();
+    return fs;
+}
+
 class FileService  {
     constructor(props){
         this.props = props;
@@ -76,11 +85,12 @@ class FileService  {
         await this.fs.removeObject(this.props.bucketName, id);
     }
 
-    async clear(){
-        await this.fs.removeBucket(this.props.bucketName);
-    }
+    //can not remove non-empty bucket
+    // async clear(){
+    //     await this.fs.removeBucket(this.props.bucketName);
+    // }
 };
 
 module.exports =  {
-    FileService
+    get
 };

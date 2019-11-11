@@ -22,26 +22,47 @@ class OperationHistoryService {
         if(!fileList) {
             fileList = [];
         }
-        const record = await DBSerivce.get().transaction(t=> {
-            return DBSerivce.models.File.update({
-                where:{
-                    id: {
-                        [Op.or]: fileList
+        const record = await (await DBSerivce.get()).transaction(t=> {
+            let fileAction;
+            if(fileList.length == 0) {
+                fileAction = Promise.resolve();
+            }else if(fileList == 1) {
+                fileAction = DBSerivce.models.File.update({
+                    attached: true,
+                },{
+                    where:{
+                        id: fileList[0],
+                        workflowInstanceId: wfiId
                     },
-                    workflowInstanceId: wfiId
-                }
-            }).then(()=>DBSerivce.models.OP.create({
+                    transaction: t
+                });
+            }else{
+                fileAction = DBSerivce.models.File.update({
+                    attached: true,
+                },{
+                    where:{
+                        id: {
+                            [Op.or]: fileList
+                        },
+                        workflowInstanceId: wfiId
+                    },
+                    transaction: t
+                });
+            }
+            return fileAction.then(()=>DBSerivce.models.OP.create({
                 workflowServiceTask: serviceTask,
                 operationData: JSON.stringify({data}),
                 userId: userId,
                 workflowInstanceId: wfiId,
+            },{
+                transaction: t
             })).catch(err=>{
                 log.error(`add operation failed:${err}`);
                 return Promise.resolve({id:''});
             });
         });
 
-        return record.id;
+        return record;
     }
 
     async findOperationByWorkflowId(wfiId, userId){

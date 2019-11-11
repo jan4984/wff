@@ -1,5 +1,6 @@
 const DBService = require('../src/db-service');
-const {FileService} = require('../src/file-service');
+const uuid = require('uuid/v4');
+const FileService = require('../src/file-service');
 const FS = require('fs');
 
 const config = {
@@ -20,7 +21,7 @@ const dbConfig = {
 };
 
 const testFilePath = 'package.json';
-const wfiId = '_test_wfid_';
+const wfiId = uuid();
 let fs;
 
 describe('__tests__ file service', ()=>{
@@ -29,12 +30,10 @@ describe('__tests__ file service', ()=>{
         await DBService.models.WFI.create({
             id:wfiId
         });
-        fs = new FileService(config);
-        await fs.init();
+        fs = await FileService.get(config);
     });
 
     afterAll(async ()=>{
-        await fs.clear();
         await DBService.get().close();
     });
 
