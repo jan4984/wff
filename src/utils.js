@@ -1,4 +1,5 @@
 const winston = require('winston');
+const jp = require('jsonpath');
 
 const defaultConfig = {
     transports:[
@@ -54,6 +55,11 @@ function ActsWithRollback(ars) {
     });
 }
 
+function JsonPath(value, query){
+    //https://github.com/dchester/jsonpath
+    return jp.query(value, query);
+}
+
 module.exports = {
-    Logger, ActsWithRollback
+    Logger, ActsWithRollback, JsonPath
 };
