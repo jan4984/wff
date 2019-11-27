@@ -1,9 +1,31 @@
-const CAEFrameWork = require('./cae-workflow');
-const DBService = require('./db-service');
-const { Sequelize, Model, QueryTypes, DataTypes } = require('sequelize');
+const {WorkflowFramework, DBService} = require('./index');
+//const WorkflowFramework = require('./workflow-framework');
+const readline = require('readline');
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+async function preH(instanceKey, type, vars) {
+    console.log('in preHandler');
+    return true;
+}
+
+async function postH(instanceKey, type, vars) {
+    console.log('in postHandler');
+    return true;
+}
+
+const hooks = {
+    SERV_testA: {
+        preHandler: preH,
+        postHandler: postH,
+    }
+};
 
 let instanceKey;
-const caeFramework = new CAEFrameWork();
+const framework = new WorkflowFramework(hooks);
 (async () => {
     const props = {
         zbInfo: 'localhost:26500',
@@ -18,7 +40,7 @@ const caeFramework = new CAEFrameWork();
     };
 
     // initialize zeebe&db connection
-    await caeFramework.initialize(props);
+    await framework.initialize(props);
 
     // deploy a workflow by passing the path of the bpmn file
     // return an object if successful with definition below
@@ -28,7 +50,7 @@ const caeFramework = new CAEFrameWork();
     //     workflowKey: string
     //     resourceName: string
     // }
-    console.log(await caeFramework.deployWorkflow('diagram_2.bpmn'));
+    console.log(await framework.deployWorkflow('diagram_2.bpmn'));
 
     // create a workflow instance with bpmnProcessId
     // return an object if successful with definition below
@@ -38,15 +60,14 @@ const caeFramework = new CAEFrameWork();
     //     version: number
     //     workflowInstanceKey: string
     // }
-    let instance = await caeFramework.createWorkflowInstance('Process_1163b87').catch(e => console.log());
+    let instance = await framework.createWorkflowInstance('Process_1163b87').catch(e => console.log(e));
 
     instanceKey = instance.workflowInstanceKey;
-
-    // post request from client should be transmitted to addOperation function
-    // addOperation will publish a message to zeebe with process name as message name
-    await caeFramework.addOperation(instanceKey, 'changeUserInfo', {
-        name: 'abc',
-        age: 16,
-        gender: 'male'
-    }, [10, 11, 12]);
 })();
+
+rl.on('line', line => {
+    console.log('read from stdin:', line);
+    if (line.length > 2) {
+        framework.addOperation(instanceKey, line, {age: 12, name: 'alice', gender: 'male'});
+    }
+});
