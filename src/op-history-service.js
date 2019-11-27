@@ -9,61 +9,73 @@ class OperationHistoryService {
         this.props = props;
     }
 
-    async addOperation(serviceTask, fileList, data, userId, wfiId){
-        if(!serviceTask || typeof serviceTask != 'string'){
-            throw 'service task not a string';
-        }
-        if(!data || typeof data != 'object'){
-            throw 'operation data not a object';
-        }
-        if(!userId || !wfiId){
-            throw 'operation must have a user and workflow instance';
-        }
-        if(!fileList) {
-            fileList = [];
-        }
-        const record = await (await DBSerivce.get()).transaction(t=> {
-            let fileAction;
-            if(fileList.length == 0) {
-                fileAction = Promise.resolve();
-            }else if(fileList == 1) {
-                fileAction = DBSerivce.models.File.update({
-                    attached: true,
-                },{
-                    where:{
-                        id: fileList[0],
-                        workflowInstanceId: wfiId
-                    },
-                    transaction: t
-                });
-            }else{
-                fileAction = DBSerivce.models.File.update({
-                    attached: true,
-                },{
-                    where:{
-                        id: {
-                            [Op.or]: fileList
-                        },
-                        workflowInstanceId: wfiId
-                    },
-                    transaction: t
-                });
-            }
-            return fileAction.then(()=>DBSerivce.models.OP.create({
-                workflowServiceTask: serviceTask,
-                operationData: JSON.stringify({data}),
-                userId: userId,
-                workflowInstanceId: wfiId,
-            },{
-                transaction: t
-            })).catch(err=>{
-                log.error(`add operation failed:${err}`);
-                return Promise.resolve({id:''});
-            });
-        });
-
-        return record;
+    async addWorkflow(record) {
+        return DBSerivce.models.WF.create(record);
     }
+
+    async getWorkflowByBpmnProcessId(bpmnProcessId) {
+        return DBSerivce.models.WF.findOne({where: {bpmnProcessId: bpmnProcessId}});
+    }
+
+    async addWorkflowInstance(instanceKey, workflowId) {
+        return DBSerivce.models.WFI.create({id: instanceKey, workflowId: workflowId});
+    }
+
+    async removeWorkflowInstance(instanceKey) {
+        return DBSerivce.models.WFI.update({deleted: true}, {where: {id: instanceKey}});
+    }
+
+    async getWorkflowInstanceByKey(instanceKey) {
+        return DBSerivce.models.WFI.findOne({where: {id: instanceKey}});
+    }
+
+    async addFile(instanceKey, file) {
+        return DBSerivce.models.File.create({path: file, workflowInstanceId: instanceKey});
+    }
+
+    // async addOperation(instanceKey, serviceType, fileList, data) {
+    //     if (!instanceKey || typeof instanceKey != 'string') {
+    //         throw 'instanceKey not a string';
+    //     }
+    //     if (!serviceType || typeof serviceType != 'string') {
+    //         throw 'serviceType not a string';
+    //     }
+    //     if (!data || typeof data != 'object') {
+    //         throw 'operation data not an object';
+    //     }
+    //
+    //     if (!fileList) {
+    //         fileList = [];
+    //     }
+    //     const record = await (await DBSerivce.get()).transaction(t => {
+    //         let fileAction;
+    //         if (fileList.length === 0) {
+    //             fileAction = Promise.resolve();
+    //         } else {
+    //             fileAction = DBSerivce.models.File.update({
+    //                 attached: true,
+    //             }, {
+    //                 where: {
+    //                     id: {[Op.in]: fileList},
+    //                     workflowInstanceId: instanceKey
+    //                 },
+    //                 transaction: t
+    //             });
+    //         }
+    //         return fileAction.then(() => DBSerivce.models.OP.create({
+    //             operationName: serviceType,
+    //             operationData: data,
+    //             workflowInstanceId: instanceKey,
+    //         }, {
+    //             transaction: t
+    //         })).catch(err => {
+    //             log.error(`add operation failed:${err}`);
+    //             return Promise.resolve({id: ''});
+    //         });
+    //     });
+    //
+    //     return record;
+    // }
 
     async findOperationByWorkflowId(wfiId, userId){
         if(wfiId && userId){
@@ -82,6 +94,56 @@ class OperationHistoryService {
             ]
         });
         return ops;
+    }
+
+    async addOperation(instanceKey, processName, data, files) {
+        if (!instanceKey) {
+            throw 'no workflow instance key specified';
+        } else if (!processName) {
+            throw 'no process name specified';
+        }
+
+        files || (files = []);
+        const record = await (await DBSerivce.get()).transaction(t => {
+            let fileAction;
+            if (files.length === 0) {
+                fileAction = Promise.resolve();
+            } else {
+                fileAction = DBSerivce.models.File.update({
+                    attached: true,
+                }, {
+                    where: {
+                        id: {[Op.in]: files},
+                        workflowInstanceId: instanceKey
+                    },
+                    transaction: t
+                });
+            }
+            return fileAction.then(() => DBSerivce.models.OP.create({
+                operationName: processName,
+                operationData: data,
+                workflowInstanceId: instanceKey,
+            }, {
+                transaction: t
+            }));
+        });
+        return record;
+    }
+
+    async findOperationByInstanceKey(instanceKey, processName) {
+        if (!instanceKey) {
+            throw 'no workflow instance key specified';
+        } else if (processName) {
+            let result = DBSerivce.models.OP.findOne({
+                attributes: ['data', 'createAt'],
+                where: {
+                    workflowInstanceId: instanceKey,
+                    operationName: processName
+                },
+                order: [['createdAt', 'DESC']]
+            });
+            return result;
+        }
     }
 
     async clearUnattachedFile(wfiId){
