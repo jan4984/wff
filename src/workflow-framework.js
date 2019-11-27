@@ -10,11 +10,11 @@ const DBService = require('./db-service');
 const {OperationHistoryService} = require('./op-history-service');
 
 class WorkflowFramework {
-    constructor(jobHandler) {
+    constructor(jobHookers) {
         this.zbClient = null;
         this.opService = new OperationHistoryService();
-        this.jobHandler = jobHandler || {};
-        this.jobWorker = {};
+        this.jobWorkers = {};
+        this.jobHookers = jobHookers || {};
         this.uploadDir = __dirname + '/';
     }
 
@@ -74,25 +74,14 @@ class WorkflowFramework {
             throw 'bpmnProcessId does not exist';
         }
 
-        // create worker if work has not been created
+        // create worker if it has not been created
         for (const service of workflow.serviceType) {
-            if (!this.jobWorker.hasOwnProperty(service)) {
-                if (this.jobHandler.hasOwnProperty(service)) {
-                    this.jobWorker[service] = await this.zbClient.createWorker(
-                        uuid.v4(),
-                        service,
-                        this.jobHandler.service,
-                    );
-                } else if (this.jobHandler.hasOwnProperty('*')) {
-                    this.jobWorker[service] = await this.zbClient.createWorker(
-                        uuid.v4(),
-                        service,
-                        this.jobHandler['*'],
-                    );
-                } else {
-                    //log.warning('service type', service, 'has no handler');
-                    console.warn('service type', service, 'has no handler');
-                }
+            if (!this.jobWorkers.hasOwnProperty(service)) {
+                this.jobWorkers[service] = await this.zbClient.createWorker(
+                    uuid.v4(),
+                    service,
+                    this._jobHandler.bind(this)
+                );
             }
         }
 
@@ -102,6 +91,9 @@ class WorkflowFramework {
             elementInstanceKey: result.workflowInstanceKey,
             variables: {instanceKey: result.workflowInstanceKey},
             local: false
+        }).catch(async (e)=> {
+            await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
+            throw e;
         });
 
         // add workflow instance record in database
@@ -110,6 +102,7 @@ class WorkflowFramework {
                 await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
                 throw e;
             });
+
         return result;
     }
 
@@ -125,7 +118,7 @@ class WorkflowFramework {
     }
 
     /*
-     * Append a workflow operation
+     * Append a workflow operation by push message
      * @param {String} workflowInstanceKey
      * @param {String} processName
      * @param {Object} [data] - Variables published with the message
@@ -145,6 +138,18 @@ class WorkflowFramework {
             variables: vars,
             timeToLive: 10000,
         });
+    }
+
+    /*
+     * Append a workflow operation directly into database
+     * @param {String} workflowInstanceKey
+     * @param {String} processName
+     * @param {Object} [data] - Variables published with the message
+     * @param {Array} [files] - Files related to this workflow instance
+     * @returns {Promise<Object>}
+     */
+    async recordOperation(workflowInstanceKey, processName, data, files) {
+        await this.opService.addOperation(workflowInstanceKey, processName, data, files);
     }
 
     /*
@@ -183,6 +188,49 @@ class WorkflowFramework {
         if (!result) {
             throw 'workflow instance does not exit';
         }
+    }
+
+    async _jobHandler(job, complete) {
+        async function hook(handler) {
+            let result = await handler(job.workflowInstanceKey, job.type, job.variables[job.type])
+                .catch(e => {
+                    console.log('exception in handler of', job.type);
+                    result = false;
+                });
+            return result;
+        }
+
+        console.log('work as service type', job.type, job.variables);
+        const jobHook = this.jobHookers[job.type];
+        if (jobHook && jobHook.preHandler) {
+            if (!await hook(jobHook.preHandler)) {
+                console.log('fail in preHandler of', job.type);
+                return complete.failure();
+            }
+        }
+
+        const pos = job.type.indexOf('_');
+        if (pos !== -1 && job.type.slice(0, pos).toLowerCase() === 'db') {
+            const message = job.type.slice(pos + 1);
+            let result = true;
+            await this.opService.addOperation(job.workflowInstanceKey, message, job.variables[message].data, job.variables[message].files)
+                .catch(e => {
+                    console.log('fail to addOperation:', e);
+                    result = false;
+                });
+            if (result) {
+                return complete.failure();
+            }
+        }
+
+        if (jobHook && jobHook.postHandler) {
+            if (!await hook(jobHook.postHandler)) {
+                console.log('fail in postHandler of', job.type);
+                return complete.failure();
+            }
+        }
+
+        await complete.success();
     }
 }
 
