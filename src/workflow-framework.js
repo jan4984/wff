@@ -79,12 +79,18 @@ class WorkflowFramework {
             elementInstanceKey: result.workflowInstanceKey,
             variables: {instanceKey: result.workflowInstanceKey},
             local: false
-        }).then(v => {
-            this.opService.addWorkflowInstance(result.workflowInstanceKey, this.defaultWorkflow.id)
-        }).catch(e => {
-            this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
+        }).catch(async (e)=> {
+            await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
             throw e;
         });
+
+        // add workflow instance record in database
+        await this.opService.addWorkflowInstance(result.workflowInstanceKey, this.defaultWorkflow.id)
+            .catch(async (e) => {
+                await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
+                throw e;
+            });
+
         return result;
     }
 
