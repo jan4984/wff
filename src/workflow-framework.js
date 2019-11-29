@@ -177,8 +177,8 @@ class WorkflowFramework {
     }
 
     async _createWorker() {
-        if (this.workflow) {
-            for (const service of this.workflow.serviceType) {
+        if (this.defaultWorkflow) {
+            for (const service of this.defaultWorkflow.serviceType) {
                 if (!this.jobWorkers.hasOwnProperty(service)) {
                     this.jobWorkers[service] = await this.zbClient.createWorker(
                         uuid.v4(),
