@@ -218,7 +218,7 @@ class WorkflowFramework {
                     console.log('fail to addOperation:', e);
                     result = false;
                 });
-            if (result) {
+            if (!result) {
                 return complete.failure();
             }
         }
