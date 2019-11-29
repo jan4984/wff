@@ -74,6 +74,8 @@ class WorkflowFramework {
         }
 
         // create workflow instance in zeebe
+        !vars && (vars = {});
+        vars.instanceKey = '';
         let result = await this.zbClient.createWorkflowInstance(this.defaultWorkflow.bpmnProcessId, vars);
         await this.zbClient.setVariables({
             elementInstanceKey: result.workflowInstanceKey,
