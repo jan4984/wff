@@ -212,14 +212,19 @@ class WorkflowFramework {
         const pos = job.type.indexOf('_');
         if (pos !== -1 && job.type.slice(0, pos).toLowerCase() === 'db') {
             const message = job.type.slice(pos + 1);
-            let result = true;
-            await this.opService.addOperation(job.workflowInstanceKey, message, job.variables[message].data, job.variables[message].files)
-                .catch(e => {
-                    console.log('fail to addOperation:', e);
-                    result = false;
-                });
-            if (!result) {
-                return complete.failure();
+            let result = false;
+            while (!result) {
+                await this.opService.addOperation(job.workflowInstanceKey, message, job.variables[message].data, job.variables[message].files)
+                    .then(v => {
+                        result = true;
+                    })
+                    .catch(e => {
+                        console.log('fail to addOperation:', e);
+                    });
+
+                if (!result) {
+                    await new Promise((resolve => {setTimeout(resolve, 1000)}));
+                }
             }
         }
 
