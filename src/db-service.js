@@ -43,6 +43,7 @@ async function get(props) {
         bpmnProcessId: {type: DataTypes.STRING, allowNull: false},
         version: {type: DataTypes.INTEGER, allowNull: true},
         serviceType: {type: DataTypes.JSON, allowNull: true},
+        default: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
     }, {
         sequelize: db,
         modelName: 'workflow'

@@ -16,6 +16,7 @@ class WorkflowFramework {
         this.jobWorkers = {};
         this.jobHookers = jobHookers || {};
         this.uploadDir = __dirname + '/';
+        this.defaultWorkflow = null;
     }
 
     /*
@@ -35,12 +36,9 @@ class WorkflowFramework {
             await DBService.get(props.dbInfo);
         }
 
-        props.uploadDir || (props.uploadDir = 'upload');
-        fs.access(props.uploadDir, err1 => {
-            !err1 || fs.mkdir(props.uploadDir, err2 => {
-                !err2 || (this.uploadDir += props.uploadDir + '/');
-            });
-        });
+        let workflow = await this.opService.getDefaultWorkflow();
+        this.defaultWorkflow = workflow;
+        await this._createWorker();
     }
 
     /*
@@ -48,61 +46,45 @@ class WorkflowFramework {
      * @param {String} workflow - A path to .bpmn files
      * @returns {Promise<DeployWorkflowResponse>} workflow information
      */
-    async deployWorkflow(workflow) {
+    async deployWorkflow(workflow, def) {
         this._initCheck();
         let serviceTypes = await this.zbClient.getServiceTypesFromBpmn(workflow);
         let result = await this.zbClient.deployWorkflow(workflow);
         let record = result.workflows[0];
         record.file = workflow;
         record.serviceType = serviceTypes;
-        await this.opService.addWorkflow(record);
+        record.default = def || true;
+        result = await this.opService.addWorkflow(record);
+        if (record.default) {
+            this.defaultWorkflow = result;
+            await this._createWorker();
+        }
         return record;
     }
 
     /*
      * Create a workflow instance
-     * @param {String} bpmnProcessId
      * @param {Object} [vars] - Payload to pass in to the workflow
      * @returns {Promise<CreateWorkflowInstanceResponse>} workflow instance information
      */
-    async createWorkflowInstance(bpmnProcessId, vars) {
+    async createWorkflowInstance(vars) {
         this._initCheck();
-
-        // get workflow information form database
-        let workflow = await this.opService.getWorkflowByBpmnProcessId(bpmnProcessId);
-        if (!workflow) {
-            throw 'bpmnProcessId does not exist';
-        }
-
-        // create worker if it has not been created
-        for (const service of workflow.serviceType) {
-            if (!this.jobWorkers.hasOwnProperty(service)) {
-                this.jobWorkers[service] = await this.zbClient.createWorker(
-                    uuid.v4(),
-                    service,
-                    this._jobHandler.bind(this)
-                );
-            }
+        if (!this.defaultWorkflow) {
+            throw 'no default workflow';
         }
 
         // create workflow instance in zeebe
-        let result = await this.zbClient.createWorkflowInstance(bpmnProcessId, vars);
+        let result = await this.zbClient.createWorkflowInstance(this.defaultWorkflow.bpmnProcessId, vars);
         await this.zbClient.setVariables({
             elementInstanceKey: result.workflowInstanceKey,
             variables: {instanceKey: result.workflowInstanceKey},
             local: false
-        }).catch(async (e)=> {
-            await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
+        }).then(v => {
+            this.opService.addWorkflowInstance(result.workflowInstanceKey, this.defaultWorkflow.id)
+        }).catch(e => {
+            this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
             throw e;
         });
-
-        // add workflow instance record in database
-        await this.opService.addWorkflowInstance(result.workflowInstanceKey, workflow.id)
-            .catch(async (e) => {
-                await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
-                throw e;
-            });
-
         return result;
     }
 
@@ -163,18 +145,14 @@ class WorkflowFramework {
     }
 
     /*
-     * Depend on module 'express-fileupload'
-     * Receive file from client and store in specific directory
+     * Record file in database
      * @param {String} workflowInstanceKey
-     * @param {Object} file (object defined in package 'express-fileupload')
+     * @param {String|Array} files - A file path or an array of file paths
      * @returns {Promise<int>}
      */
-    async uploadFile(workflowInstanceKey, file) {
-        await this._instanceKeyCheck();
-        const savePath = this.uploadDir + workflowInstanceKey + '_' + Date.now().toString();
-        await file.mv(`${savePath}`);
-        const result = await this.opService.addFile(workflowInstanceKey, savePath);
-        return result.id;
+    async addFile(workflowInstanceKey, files) {
+        this._instanceKeyCheck();
+        return this.opService.addFile(workflowInstanceKey, files);
     }
 
     _initCheck() {
@@ -187,6 +165,20 @@ class WorkflowFramework {
         let result = await this.opService.getWorkflowInstanceByKey(workflowInstanceKey);
         if (!result) {
             throw 'workflow instance does not exit';
+        }
+    }
+
+    async _createWorker() {
+        if (this.workflow) {
+            for (const service of this.workflow.serviceType) {
+                if (!this.jobWorkers.hasOwnProperty(service)) {
+                    this.jobWorkers[service] = await this.zbClient.createWorker(
+                        uuid.v4(),
+                        service,
+                        this._jobHandler.bind(this)
+                    );
+                }
+            }
         }
     }
 

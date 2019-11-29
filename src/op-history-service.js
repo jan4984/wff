@@ -10,11 +10,19 @@ class OperationHistoryService {
     }
 
     async addWorkflow(record) {
-        return DBSerivce.models.WF.create(record);
+        return (await DBSerivce.get()).transaction(t => {
+            let clearDefault;
+            if (!record.default) {
+                clearDefault = Promise.resolve();
+            } else {
+                clearDefault = DBSerivce.models.WF.update({default: false}, {where: {default: true}, transaction: t});
+            }
+            return clearDefault.then(v => DBSerivce.models.WF.create(record, {transaction: t}));
+        });
     }
 
-    async getWorkflowByBpmnProcessId(bpmnProcessId) {
-        return DBSerivce.models.WF.findOne({where: {bpmnProcessId: bpmnProcessId}});
+    async getDefaultWorkflow() {
+        return DBSerivce.models.WF.findOne({where: {default: true}});
     }
 
     async addWorkflowInstance(instanceKey, workflowId) {
@@ -134,8 +142,8 @@ class OperationHistoryService {
         if (!instanceKey) {
             throw 'no workflow instance key specified';
         } else if (processName) {
-            let result = DBSerivce.models.OP.findOne({
-                attributes: ['data', 'createAt'],
+            let result = await DBSerivce.models.OP.findOne({
+                attributes: [['operationData', 'data'], 'createAt'],
                 where: {
                     workflowInstanceId: instanceKey,
                     operationName: processName
