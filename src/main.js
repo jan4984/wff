@@ -1,4 +1,4 @@
-const {WorkflowFramework, DBService} = require('./index');
+const {WorkflowFramework, DBService} = require('../index');
 //const WorkflowFramework = require('./workflow-framework');
 const readline = require('readline');
 
