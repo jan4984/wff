@@ -210,8 +210,9 @@ class WorkflowFramework {
         }
 
         const pos = job.type.indexOf('_');
+        let message = null;
         if (pos !== -1 && job.type.slice(0, pos).toLowerCase() === 'db') {
-            const message = job.type.slice(pos + 1);
+            message = job.type.slice(pos + 1);
             let result = false;
             while (!result) {
                 await this.opService.addOperation(job.workflowInstanceKey, message, job.variables[message].data, job.variables[message].files)
@@ -223,7 +224,9 @@ class WorkflowFramework {
                     });
 
                 if (!result) {
-                    await new Promise((resolve => {setTimeout(resolve, 1000)}));
+                    await new Promise((resolve => {
+                        setTimeout(resolve, 1000)
+                    }));
                 }
             }
         }
@@ -235,7 +238,12 @@ class WorkflowFramework {
             }
         }
 
-        await complete.success();
+        let vars = null;
+        if (message) {
+            vars = {};
+            vars[message] = {}
+        }
+        await complete.success(vars);
     }
 }
 
