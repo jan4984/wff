@@ -203,6 +203,21 @@ class WorkflowFramework {
 
         console.log('work as service type', job.type, job.variables);
         const jobHook = this.jobHookers[job.type];
+        if (jobHook && jobHook.jobHandler) {
+            let result = true;
+            let retData = await jobHook.jobHandler(job.workflowInstanceKey, job.type, job.variables)
+                .catch(e => {
+                    console.log('exception in handler of', job.type, e);
+                    result = false;
+                });
+            if (!result) {
+                await complete.failure();
+            } else {
+                await complete.success(retData);
+            }
+            return;
+        }
+
         if (jobHook && jobHook.preHandler) {
             if (!await hook(jobHook.preHandler)) {
                 console.log('fail in preHandler of', job.type);
