@@ -239,12 +239,7 @@ class WorkflowFramework {
             }
         }
 
-        let vars = null;
-        if (message) {
-            vars = {};
-            vars[message] = {}
-        }
-        await complete.success(vars);
+        await complete.success();
     }
 }
 
