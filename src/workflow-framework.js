@@ -193,7 +193,7 @@ class WorkflowFramework {
     async _jobHandler(job, complete) {
         async function hook(handler) {
             let result = true;
-            result = await handler(job.workflowInstanceKey, job.type, job.variables[job.type])
+            result = await handler(job.workflowInstanceKey, job.type, job.variables)
                 .catch(e => {
                     console.log('exception in handler of', job.type, e);
                     result = false;
