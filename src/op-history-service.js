@@ -37,9 +37,9 @@ class OperationHistoryService {
         return DBSerivce.models.WFI.findOne({where: {id: instanceKey}});
     }
 
-    async addFile(instanceKey, file) {
-        return DBSerivce.models.File.create({path: file, workflowInstanceId: instanceKey});
-    }
+    // async addFile(instanceKey, file) {
+    //     return DBSerivce.models.File.create({path: file, workflowInstanceId: instanceKey});
+    // }
 
     // async addOperation(instanceKey, serviceType, fileList, data) {
     //     if (!instanceKey || typeof instanceKey != 'string') {

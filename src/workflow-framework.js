@@ -158,10 +158,10 @@ class WorkflowFramework {
      * @param {String|Array} files - A file path or an array of file paths
      * @returns {Promise<int>}
      */
-    async addFile(workflowInstanceKey, files) {
-        this._instanceKeyCheck();
-        return this.opService.addFile(workflowInstanceKey, files);
-    }
+    // async addFile(workflowInstanceKey, files) {
+    //     this._instanceKeyCheck();
+    //     return this.opService.addFile(workflowInstanceKey, files);
+    // }
 
     _initCheck() {
         if (!this.zbClient) {

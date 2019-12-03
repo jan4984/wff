@@ -56,7 +56,7 @@ async function get(props) {
         modelName: 'workflowInstance'
     });
     File.init({
-        path: {type: DataTypes.STRING, allowNull: false},
+        id: {type: DataTypes.STRING, primaryKey: true},
         attached: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
     }, {
         sequelize: db,
