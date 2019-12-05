@@ -139,7 +139,7 @@ class WorkflowFramework {
      * @returns {Promise<Object>}
      */
     async recordOperation(workflowInstanceKey, processName, data, files) {
-        await this.opService.addOperation(workflowInstanceKey, processName, data, files);
+        return this.opService.addOperation(workflowInstanceKey, processName, data, files);
     }
 
     /*
