@@ -144,7 +144,7 @@ class OperationHistoryService {
             throw 'no workflow instance key specified';
         } else if (processName) {
             let result = await DBSerivce.models.OP.findOne({
-                attributes: [['operationData', 'data'], 'createdAt'],
+                attributes: [['operationData', 'data'], ['fileData', 'files'], 'createdAt'],
                 where: {
                     workflowInstanceId: instanceKey,
                     operationName: processName
