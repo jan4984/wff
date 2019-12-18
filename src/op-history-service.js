@@ -130,6 +130,7 @@ class OperationHistoryService {
             return fileAction.then(() => DBSerivce.models.OP.create({
                 operationName: processName,
                 operationData: data,
+                fileData: files,
                 workflowInstanceId: instanceKey,
             }, {
                 transaction: t
