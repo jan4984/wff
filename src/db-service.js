@@ -24,11 +24,15 @@ class File extends Model{
 
 async function get(props) {
     if (db) return db;
-    db = new Sequelize(props.database, props.username, props.password, {
-        dialect: 'postgres',
-        host: props.host,
-        port: props.port,
-    });
+    if(!props.db) {
+        db = new Sequelize(props.database, props.username, props.password, {
+            dialect: 'postgres',
+            host: props.host,
+            port: props.port,
+        });
+    }else{
+        db = props.db;
+    }
     OP.init({
         operationName: {type: DataTypes.STRING, allowNull: false},
         operationData: {type: DataTypes.JSON, allowNull: false},
@@ -75,7 +79,7 @@ async function get(props) {
     //User.belongsToMany(WFI, {through: 'WorkflowInstanceUser'});
 
     await db.authenticate();
-    await db.sync({force:!!props.recreate});
+    await db.sync();
     return db;
 }
 
