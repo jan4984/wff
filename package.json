@@ -7,11 +7,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
-    "express": "~4.16.1",
     "jsonpath": "^1.0.2",
-    "minio": "^7.0.12",
     "morgan": "~1.9.1",
     "pg": "^7.12.1",
     "pg-hstore": "^2.3.3",
@@ -19,6 +16,7 @@
     "trace": "^3.1.1",
     "uuid": "^3.3.3",
     "winston": "^3.2.1",
+    "xml-js": "^1.6.11",
     "zeebe-node": "^0.21.2"
   },
   "devDependencies": {
