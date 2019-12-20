@@ -27,7 +27,9 @@ class BpmnEngine {
     }
 
     getTasks(){
-        return jsonpath.query(this.json, '$..bpmn_serviceTask')[0];
+        const st = jsonpath.query(this.json, '$..bpmn_serviceTask')[0];
+        const rt = jsonpath.query(this.json, '$..bpmn_receiveTask')[0]
+        return st.concat(...rt);
     }
 
     findByIncoming(id){
@@ -35,6 +37,7 @@ class BpmnEngine {
             isServiceTask:[`$..bpmn_serviceTask[?(@.bpmn_incoming=="${id}")]`, `$..bpmn_serviceTask[?(@.bpmn_incoming.indexOf("${id}") != -1 )]`],
             isExclusiveGateway:[`$..bpmn_exclusiveGateway[?(@.bpmn_incoming.indexOf("${id}") != -1 )]`, `$..bpmn_exclusiveGateway[?(@.bpmn_incoming=="${id}")]`],
             isParallelGateway:[`$..bpmn_parallelGateway[?(@.bpmn_incoming.indexOf("${id}") != -1 )]`, `$..bpmn_parallelGateway[?(@.bpmn_incoming=="${id}")]`],
+            isReceiveTask:[`$..bpmn_receiveTask[?(@.bpmn_incoming=="${id}")]`, `$..bpmn_receiveTask[?(@.bpmn_incoming.indexOf("${id}") != -1 )]`],
             //isEnd:[`$..bpmn_endEvent[?(@.bpmn_incoming=="${id}")]`, `$..bpmn_endEvent[?(@.bpmn_incoming.indexOf("${id}") != -1 )]`]
         };
 
@@ -49,7 +52,7 @@ class BpmnEngine {
                 return false;
             });
             return v;
-        },{isParallelGateway:false, isExclusiveGateway:false, isServiceTask:false, isEnd:false, task:null});
+        },{isParallelGateway:false, isReceiveTask:false, isExclusiveGateway:false, isServiceTask:false, isEnd:false, task:null});
 
         if(!task.task){
             if(jsonpath.query(this.json, '$..bpmn_endEvent')[0].bpmn_incoming == id){
@@ -61,13 +64,45 @@ class BpmnEngine {
     }
 
     getTaskByName(name){
-        const tasks = jsonpath.query(this.json, `$..bpmn_serviceTask[?(@.name=="${name}")]`);
+        let tasks = jsonpath.query(this.json, `$..bpmn_serviceTask[?(@.name=="${name}")]`);
+        if(tasks && tasks[0]) {
+            return tasks[0];
+        }
+        tasks = jsonpath.query(this.json, `$..bpmn_receiveTask[?(@.name=="${name}")]`);
         return tasks && tasks[0];
     }
 
-    nextProcess(currentTask, variables){
+    _matchIncomingParallelGateway(gateway, nodes){
+        let incomings = gateway.bmpn_incoming;
+        if(!Array.isArray(incomings)){
+            incomings = [incomings];
+        }
+        let leftNodes = [];
+        nodes.forEach(n=>leftNodes.push(n));
+        const match = incomings.every(inF=>nodes.find(n=>{
+            let outFlow = n.bpmn_outgoing;
+            if(!Array.isArray(outFlow)){
+                outFlow = [outFlow];
+            }
+            const isIncoming = outFlow.find(outF=>inF == outF);
+            if(isIncoming){
+                const i = leftNodes.findIndex(n);
+                leftNodes = leftNodes.splice(i, 1);
+            }
+        }));
+
+        if(match){
+            return leftNodes;
+        }
+        return nodes;
+    }
+
+    nextProcess(currentTasks, variables){
+        if(!Array.isArray(currentTasks)) currentTasks = [currentTasks];
         const outputs = [];
-        this._nextProcess(currentTask, variables, outputs);
+        currentTasks.forEach(t=>{
+            this._nextProcess(t, variables, outputs);
+        });
         return outputs;
     }
 
@@ -80,6 +115,17 @@ class BpmnEngine {
             task = tasks && tasks[0];
         }else if(currentTask.isParallelGateway) {
             const tasks = jsonpath.query(this.json, `$..bpmn_parallelGateway[?(@.id=="${currentTask.task.id}")]`);
+            task = tasks && tasks[0];
+            const matchOut = this._matchIncomingParallelGateway(task, outputs);
+            if (matchOut.length != outputs.length) {
+                outputs.length = 0;
+                matchOut.forEach(n => outputs.push(n));
+            } else {
+                outputs.push(task);
+                return;
+            }
+        }else if(currentTask.isReceiveTask){
+            const tasks = jsonpath.query(this.json, `$..bpmn_receiveTask[?(@.name=="${currentTask.task.name}")]`);
             task = tasks && tasks[0];
         }else {
             const tasks = jsonpath.query(this.json, `$..bpmn_serviceTask[?(@.name=="${currentTask.task.name}")]`);
