@@ -1,22 +1,19 @@
-/**
- *     历史记录。SQL。数据用JSON.stringify()。历史操作表只能insert、query，不能update
- *     对象/文件 存储。minio
- *     权限检查。SQL。管理员、操作员。管理员可以维护每一步哪些操作员
- */
 const uuid = require('uuid/v4');
-const ZB = require('zeebe-node');
 const fs = require('fs');
-const DBService = require('./db-service');
+var crypto = require('crypto');
 const {OperationHistoryService} = require('./op-history-service');
+const {BpmnEngine} = require('./engine');
+const WorkflowInstance = require('./workflow-instance');
+
+const {Logger} = require('./utils');
+const log = Logger({tag:'workflow-framework'});
 
 class WorkflowFramework {
-    constructor(jobHookers) {
-        this.zbClient = null;
-        this.opService = new OperationHistoryService();
-        this.jobWorkers = {};
-        this.jobHookers = jobHookers || {};
-        this.uploadDir = __dirname + '/';
-        this.defaultWorkflow = null;
+    constructor() {
+        this.dbService = new OperationHistoryService();
+        this.workflows = {};
+        this.instances = {};
+        this.md5s = {};
     }
 
     /*
@@ -25,75 +22,54 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async initialize(props) {
-        if (!this.zbClient) {
-            let zbClient = new ZB.ZBClient(props.zbInfo);
-            let topology = await zbClient.topology();
-            console.log(topology);
-            this.zbClient = zbClient;
+        for (const workflow of await this.dbService.getWorkflows()) {
+            await this._addWorkflow(workflow);
         }
 
-        if (props.dbInfo) {
-            await DBService.get(props.dbInfo);
+        for (const instance of await this.dbService.getInstances()) {
+            await this._addInstance(instance);
         }
-
-        let workflow = await this.opService.getDefaultWorkflow();
-        this.defaultWorkflow = workflow;
-        await this._createWorker();
     }
 
     /*
      * Deploy workflow(s)
      * @param {String} workflow - A path to .bpmn files
-     * @returns {Promise<DeployWorkflowResponse>} workflow information
+     * @returns {Promise<string>} workflow id
      */
-    async deployWorkflow(workflow, def) {
-        this._initCheck();
-        let serviceTypes = await this.zbClient.getServiceTypesFromBpmn(workflow);
-        let result = await this.zbClient.deployWorkflow(workflow);
-        let record = result.workflows[0];
-        record.file = workflow;
-        record.serviceType = serviceTypes;
-        record.default = def || true;
-        result = await this.opService.addWorkflow(record);
-        if (record.default) {
-            this.defaultWorkflow = result;
-            await this._createWorker();
+    async deployWorkflow(bpmnFile) {
+        const content = fs.readFileSync(bpmnFile);
+        const md5 = await this._getFileMd5(content);
+        if (this.md5s.hasOwnProperty(md5)) {
+            return this.md5s[md5];
+        } else {
+            let workflow = await this.dbService.addWorkflow({content: content});
+            await this._addWorkflow(workflow);
+            return workflow.id;
         }
-        return record;
+    }
+
+    async deleteWorkflow(workflowId) {
+
     }
 
     /*
      * Create a workflow instance
      * @param {Object} [vars] - Payload to pass in to the workflow
-     * @returns {Promise<CreateWorkflowInstanceResponse>} workflow instance information
+     * @returns {Promise<string>} workflow instance information
      */
-    async createWorkflowInstance(vars) {
-        this._initCheck();
-        if (!this.defaultWorkflow) {
-            throw 'no default workflow';
+    async createWorkflowInstance(workflowId, vars) {
+        if (!this.workflows.hasOwnProperty(workflowId)) {
+            throw 'not find workflow with id ' + workflowId;
         }
 
-        // create workflow instance in zeebe
         !vars && (vars = {});
-        vars.instanceKey = '';
-        let result = await this.zbClient.createWorkflowInstance(this.defaultWorkflow.bpmnProcessId, vars);
-        await this.zbClient.setVariables({
-            elementInstanceKey: result.workflowInstanceKey,
-            variables: {instanceKey: result.workflowInstanceKey},
-            local: false
-        }).catch(async (e)=> {
-            await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
-            throw e;
+        const instance = await this.dbService.addInstance({
+            id: uuid(),
+            workflowId: workflowId,
+            variables: vars
         });
-
-        // add workflow instance record in database
-        await this.opService.addWorkflowInstance(result.workflowInstanceKey, this.defaultWorkflow.id)
-            .catch(async (e) => {
-                await this.zbClient.cancelWorkflowInstance(result.workflowInstanceKey);
-                throw e;
-            });
-
-        return result;
+        await this._addInstance(instance);
+        return instance.id;
     }
 
     /*
@@ -101,10 +77,8 @@ class WorkflowFramework {
      * @param {String} workflowInstanceKey
      * @returns {Promise<>}
      */
-    async deleteWorkflowInstance(workflowInstanceKey) {
-        this._initCheck();
-        await this.opService.removeWorkflowInstance(workflowInstanceKey);
-        await this.zbClient.cancelWorkflowInstance(workflowInstanceKey);
+    async deleteWorkflowInstance(instanceId) {
+
     }
 
     /*
@@ -115,19 +89,12 @@ class WorkflowFramework {
      * @param {Array} [files] - Files related to this workflow instance
      * @returns {Promise<>}
      */
-    async addOperation(workflowInstanceKey, processName, data, files) {
-        this._initCheck();
-        let vars = {};
-        vars[processName] = {};
-        vars[processName].data = data || {};
-        vars[processName].files = files || [];
-        await this.zbClient.publishMessage({
-            name: processName,
-            messageId: uuid.v4(),
-            correlationKey: workflowInstanceKey,
-            variables: vars,
-            timeToLive: 10000,
-        });
+    async addOperation(instanceId, task, data, files) {
+        if (!this.instances.hasOwnProperty(instanceId)) {
+            throw 'no matched instance';
+        } else {
+            this.instances[instanceId].message(task, data);
+        }
     }
 
     /*
@@ -148,25 +115,26 @@ class WorkflowFramework {
      * @param {String} processName
      * @returns {Promise<Object>}
      */
-    async getOperation(workflowInstanceKey, processName) {
+    async getOperation(instanceId, processName) {
         return this.opService.findOperationByInstanceKey(workflowInstanceKey, processName);
     }
 
-    /*
-     * Record file in database
-     * @param {String} workflowInstanceKey
-     * @param {String|Array} files - A file path or an array of file paths
-     * @returns {Promise<int>}
-     */
-    // async addFile(workflowInstanceKey, files) {
-    //     this._instanceKeyCheck();
-    //     return this.opService.addFile(workflowInstanceKey, files);
-    // }
-
-    _initCheck() {
-        if (!this.zbClient) {
-            throw 'disconnect from Zeebe broker';
+    async _addWorkflow(workflow) {
+        try {
+            const md5 = await this._getFileMd5(workflow.content);
+            const engine = new BpmnEngine(workflow.content);
+            this.workflows[workflow.id] = engine;
+            this.md5s[md5] = workflow.id;
+        } catch (e) {
+            console.log(e);
         }
+    }
+
+    async _addInstance(instance) {
+        const workflow = this.workflows[instance.workflowId];
+        const wfi = new WorkflowInstance(instance.id, workflow.engine);
+        await wfi.initialize();
+        this.instances[instance.id] = wfi;
     }
 
     async _instanceKeyCheck(workflowInstanceKey) {
@@ -176,85 +144,10 @@ class WorkflowFramework {
         }
     }
 
-    async _createWorker() {
-        if (this.defaultWorkflow) {
-            for (const service of this.defaultWorkflow.serviceType) {
-                if (!this.jobWorkers.hasOwnProperty(service)) {
-                    this.jobWorkers[service] = await this.zbClient.createWorker(
-                        uuid.v4(),
-                        service,
-                        this._jobHandler.bind(this)
-                    );
-                }
-            }
-        }
-    }
-
-    async _jobHandler(job, complete) {
-        async function hook(handler) {
-            let result = true;
-            result = await handler(job.workflowInstanceKey, job.type, job.variables)
-                .catch(e => {
-                    console.log('exception in handler of', job.type, e);
-                    result = false;
-                });
-            return result;
-        }
-
-        console.log('work as service type', job.type, job.variables);
-        const jobHook = this.jobHookers[job.type];
-        if (jobHook && jobHook.jobHandler) {
-            let result = true;
-            let retData = await jobHook.jobHandler(job.workflowInstanceKey, job.type, job.variables)
-                .catch(e => {
-                    console.log('exception in handler of', job.type, e);
-                    result = false;
-                });
-            if (!result) {
-                await complete.failure();
-            } else {
-                await complete.success(retData);
-            }
-            return;
-        }
-
-        if (jobHook && jobHook.preHandler) {
-            if (!await hook(jobHook.preHandler)) {
-                console.log('fail in preHandler of', job.type);
-                return complete.failure();
-            }
-        }
-
-        const pos = job.type.indexOf('_');
-        let message = null;
-        if (pos !== -1 && job.type.slice(0, pos).toLowerCase() === 'db') {
-            message = job.type.slice(pos + 1);
-            let result = false;
-            while (!result) {
-                await this.opService.addOperation(job.workflowInstanceKey, message, job.variables[message].data, job.variables[message].files)
-                    .then(v => {
-                        result = true;
-                    })
-                    .catch(e => {
-                        console.log('fail to addOperation:', e);
-                    });
-
-                if (!result) {
-                    await new Promise((resolve => {
-                        setTimeout(resolve, 1000)
-                    }));
-                }
-            }
-        }
-
-        if (jobHook && jobHook.postHandler) {
-            if (!await hook(jobHook.postHandler)) {
-                console.log('fail in postHandler of', job.type);
-                return complete.failure();
-            }
-        }
-
-        await complete.success();
+    async _getFileMd5(data) {
+        var fsHash = crypto.createHash('md5');
+        fsHash.update(data);
+        return fsHash.digest('hex');
     }
 }
 

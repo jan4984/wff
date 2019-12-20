@@ -9,16 +9,36 @@ class OperationHistoryService {
         this.props = props;
     }
 
-    async addWorkflow(record) {
-        return (await DBSerivce.get()).transaction(t => {
-            let clearDefault;
-            if (!record.default) {
-                clearDefault = Promise.resolve();
-            } else {
-                clearDefault = DBSerivce.models.WF.update({default: false}, {where: {default: true}, transaction: t});
-            }
-            return clearDefault.then(v => DBSerivce.models.WF.create(record, {transaction: t}));
-        });
+    async getWorkflows() {
+        return DBSerivce.models.WF.findAll({where: {deleted: false}});
+    }
+
+    async addWorkflow(workflow) {
+        return DBSerivce.models.WF.create(workflow);
+    }
+
+    async getInstances() {
+        return DBSerivce.models.WFI.findAll({where: {deleted: false}});
+    }
+
+    async getInstanceId(instanceId) {
+        return DBSerivce.models.WFI.findOne({where: {id: instanceId, deleted: false}});
+    }
+
+    async getInstancesByWorkflowId(workflowId) {
+
+    }
+
+    async getOperationsByInstanceId(instanceId) {
+        return DBSerivce.models.OP.findAll({where: {instanceId: instanceId}});
+    }
+
+    async addInstance(instance) {
+        return DBSerivce.models.WFI.create(instance);
+    }
+
+    async getLastOperationByInstanceId(instanceId) {
+        return DBSerivce.models.OP.findOne({where: {instanceId: instanceId}});
     }
 
     async getDefaultWorkflow() {
@@ -35,6 +55,10 @@ class OperationHistoryService {
 
     async getWorkflowInstanceByKey(instanceKey) {
         return DBSerivce.models.WFI.findOne({where: {id: instanceKey}});
+    }
+
+    async getInstanceById(instanceId) {
+        return DBSerivce.models.WFI.findOne({where: {id: instanceId}});
     }
 
     // async addFile(instanceKey, file) {
