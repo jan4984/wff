@@ -525,6 +525,12 @@ describe('test engine', async()=>{
             });
     });
 
+    it('get task', async() =>{
+        const task = e.getTaskByName('提交硬件结构资料是否有整机');
+        expect(task.name).toEqual('提交硬件结构资料是否有整机');
+        expect(task.id).toEqual('RT_submitHWInfo');
+    });
+
     it('all yes go', async ()=>{
         const varaibles = {
             审核资料:{data:{status:'通过'}},
@@ -535,77 +541,77 @@ describe('test engine', async()=>{
             整机测试:{data:{status:'通过'}},
         };
         let next = e.nextProcess({isStart:true}, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('硬件项目资料');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('审核资料');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('指定FAE');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提交硬件结构资料是否有整机');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供案例音频，音频测试');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('音频测试');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提交编译链');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供调试算法库');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供整机音频');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('整机音频测试');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('整机测试');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('已收到整机');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('开始测试');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('测试完成');
 
         next = e.nextProcess(next, varaibles);
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('归档');
 
-        next = e.nextProcess(next, varaibles);
+        next = e.nextProcess(next, varaibles)[0];
         expect(next.isEnd).toEqual(true);
 
     });
 
     it('error if can not go', async()=>{
         let next = e.nextProcess({isStart:true}, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('硬件项目资料');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('审核资料');
 
         try {
@@ -617,96 +623,96 @@ describe('test engine', async()=>{
         }
 
         next = e.nextProcess(next, {审核资料: {data: {status: '通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('指定FAE');
     });
 
     it('every x fail once', async() =>{
         let next = e.nextProcess({isStart:true}, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('硬件项目资料');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('审核资料');
 
         next = e.nextProcess(next, {审核资料:{data:{status:'不通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('硬件项目资料');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('审核资料');
 
         next = e.nextProcess(next, {审核资料:{data:{status:'通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('指定FAE');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提交硬件结构资料是否有整机');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供案例音频，音频测试');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('音频测试');
 
         next = e.nextProcess(next, {音频测试:{data:{status:'不通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供案例音频，音频测试');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('音频测试');
 
         next = e.nextProcess(next, {音频测试:{data:{status:'通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提交编译链');
 
         next = e.nextProcess(next, {商务确认:{data:{status:'等待'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('商务确认');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供调试算法库');
 
         next = e.nextProcess(next, {提供调试算法库:{data:{status:'不通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提交编译链');
 
         next = e.nextProcess(next, {商务确认:{data:{status:'通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供调试算法库');
 
         next = e.nextProcess(next, {提供调试算法库:{data:{status:'通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供整机音频');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('整机音频测试');
 
         next = e.nextProcess(next, {整机音频测试:{data:{status:'不通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('提供整机音频');
 
         next = e.nextProcess(next, {});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('整机音频测试');
 
         next = e.nextProcess(next, {整机音频测试:{data:{status:'通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('整机测试');
 
         next = e.nextProcess(next, {整机测试:{data:{status:'不通过'}}});
-        expect(next.isServiceTask).toEqual(true);
+        next = next[0];expect(next.isServiceTask).toEqual(true);
         expect(next.task.name).toEqual('归档');
 
-        next = e.nextProcess(next, {});
+        next = e.nextProcess(next, {})[0];
         expect(next.isEnd).toEqual(true);
     });
 });
