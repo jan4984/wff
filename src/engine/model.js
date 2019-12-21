@@ -3,6 +3,7 @@ class Step{
         this.id = props.id;
         this.in = props.in;
         this.out = props.out;
+        this.name = props.node.name;
     }
 }
 

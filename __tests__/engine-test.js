@@ -1,9 +1,9 @@
-const engine = require('../src/engine');
+const {parse} = require('../src/engine');
 
 describe('test engine', async()=>{
     let e;
     beforeAll(async()=>{
-        e = new engine.BpmnEngine('<?xml version="1.0" encoding="UTF-8"?>\n' +
+        e = parse('<?xml version="1.0" encoding="UTF-8"?>\n' +
             '<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_1wdgt9y" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Zeebe Modeler" exporterVersion="0.7.0">\n' +
             '  <bpmn:process id="Process_0fkfho2" name="是" isExecutable="true">\n' +
             '    <bpmn:exclusiveGateway id="ExclusiveGateway_1pr5was" name="审核是否通过">\n' +

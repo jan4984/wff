@@ -3,16 +3,23 @@ const StartStep = require('./start-event');
 const EndStep = require('./end-event');
 const ExclusiveStep = require('./exclusive-gateway');
 const ParallelStep = require('./parallel-gateway');
-const ReceiveStep = require('./service-task');
+const ReceiveStep = require('./receive-task');
 const ServiceStep = require('./service-task');
 const xml = require('fast-xml-parser');
-const jsonpath = require('jsonpath');
 
 function _parseAll(nodes, step){
     const refs = [];
-
+    let outputs = [step]
+    while(outputs.length > 0){
+        const itr = outputs.slice(0);
+        outputs.length = 0;
+        itr.forEach(s=>{
+            _parseNext(nodes, s, refs).forEach(n=>outputs.push(n));
+        });
+    }
 }
 
+//add targetStep, but not resolve targetStep's outgoing target
 function _parseNext(nodes, step, refs) {
     const output = [];
     if(step.isEnd){
@@ -26,17 +33,38 @@ function _parseNext(nodes, step, refs) {
         if(!lineNode) throw `no sequenceFlow ${line.id}`;
 
         const target = _findLineTarget(nodes, lineNode);
-        if(refs.find(r=>r.id == target.task.id)) return;
-        if(target.isEnd){
-            output.push(
-                const o = new EndStep({
-                    id:target.task.id,
-                    in:
+        let targetStep;
+        targetStep = refs.find(r=>r.id == target.task.id);
+        if(!targetStep) {
+            const props = {id:target.task.id, in:[], out:[], node:target.task};
+            if (target.isEnd) targetStep = new EndStep(props);
+            else if (target.isServiceTask) targetStep = new ServiceStep(props);
+            else if (target.isReceiveTask) targetStep = new ReceiveStep(props);
+            else if (target.isExclusiveGateway) targetStep = new ExclusiveStep(props);
+            else if (target.isParallelGateway) targetStep = new ParallelStep(props);
+            else throw 'unknown step type';
+            output.push(targetStep);
+            refs.push(targetStep);
+            targetStep.in = [];
+            targetStep.out = [];
+            if(target.task.bpmn_outgoing) {
+                targetStep.out = target.task.bpmn_outgoing.map(f => {
+                    const targetStepOutLine = _findLine(nodes, f);
+                    if (!targetStepOutLine) throw `no sequenceFlow ${f}`;
+                    return new Line({
+                        id: f,
+                        in: targetStep,
+                        exp: targetStepOutLine.bpmn_conditionExpression && targetStepOutLine.bpmn_conditionExpression['#text']
+                    });
                 });
-            )
+            }
         }
-        const lineShape = new Line({id:line.id, in:startStep,out:null, exp:line.bpmn_conditionExpression && line.bpmn_conditionExpression['#text']});
+
+        line.out = targetStep;
+        targetStep.in.push(line);
     });
+
+    return output;
 }
 
 function _findLine(nodes, lineId){
@@ -45,10 +73,10 @@ function _findLine(nodes, lineId){
 
 function _findStep(nodes, id){
     const match = {
-        isServiceTask: ()=>nodes.bmpn_serviceTask.find(n=>n.id == id),
-        isExclusiveGateway: ()=>nodes.bpmn_xclusiveGateway.find(n=>n.id == id),
+        isServiceTask: ()=>nodes.bpmn_serviceTask.find(n=>n.id == id),
+        isExclusiveGateway: ()=>nodes.bpmn_exclusiveGateway.find(n=>n.id == id),
         isParallelGateway: ()=>nodes.bpmn_parallelGateway.find(n=>n.id == id),
-        isReceiveTask: ()=>nodes.bmpn_receiveTask.find(n=>n.id == id),
+        isReceiveTask: ()=>nodes.bpmn_receiveTask.find(n=>n.id == id),
         isEnd:()=>nodes.bpmn_endEvent.find(n=>n.id == id)
     };
 
@@ -71,6 +99,8 @@ function _findLineTarget(nodes, line) {
 
     const target = _findStep(nodes, line.targetRef);
     if(!target.task) throw `no target find for id ${line.targetRef}`;
+
+    return target;
 }
 
 function parse(xmlString){
@@ -94,7 +124,8 @@ function parse(xmlString){
     if (!xml.validate(xmlString)) {
         throw 'not a valid xml';
     }
-    const nodes = xml.parse(xmlString, parserOptions).bpmn_definitions.bmpn_process;
+    const json = xml.parse(xmlString, parserOptions);
+    const nodes = json.bpmn_definitions.bpmn_process;
     const stepTypes = ['bpmn_exclusiveGateway', 'bpmn_serviceTask', 'bpmn_sequenceFlow', 'bpmn_startEvent', 'bpmn_receiveTask', 'bpmn_parallelGateway', 'bpmn_endEvent'];
     stepTypes.forEach(t=>{
         if(nodes[t] && !Array.isArray(nodes[t])){
@@ -111,13 +142,15 @@ function parse(xmlString){
     });
 
 
-    const startStep = new StartStep({id:nodes.bpmn_startEvent[0].id, in:[], out:null});
+    const startStep = new StartStep({id:nodes.bpmn_startEvent[0].id, in:[], out:null, node:nodes.bpmn_startEvent[0]});
     const line = _findLine(nodes, nodes.bpmn_startEvent[0].bpmn_outgoing);
     if(!line) throw `can not find sequenceFlow ${nodes.bpmn_startEvent[0].bpmn_outgoing}`;
     const lineShape = new Line({id:line.id, in:startStep,out:null, exp:line.bpmn_conditionExpression && line.bpmn_conditionExpression['#text']});
+    startStep.out = [lineShape];
     _parseAll(nodes, startStep);
+    return startStep
 }
 
-function go(model, starts){
-
+module.exports = {
+    parse
 }
