@@ -2,7 +2,7 @@ const {Step} = require('./model');
 class ReceiveStep extends Step{
     constructor(props) {
         super(props);
-        this.message = props.node.messageRef;
+        this.message = props.message;
         this.isReceiveTask = true;
     }
 }

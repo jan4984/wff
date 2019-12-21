@@ -1,8 +1,8 @@
 const {parse} = require('../src/engine');
 
-describe('test engine', async()=>{
+describe('test engine', async () => {
     let e;
-    beforeAll(async()=>{
+    beforeAll(async () => {
         e = parse('<?xml version="1.0" encoding="UTF-8"?>\n' +
             '<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_1wdgt9y" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Zeebe Modeler" exporterVersion="0.7.0">\n' +
             '  <bpmn:process id="Process_0fkfho2" name="是" isExecutable="true">\n' +
@@ -52,7 +52,7 @@ describe('test engine', async()=>{
             '    <bpmn:sequenceFlow id="SequenceFlow_1qr0u5s" name="否" sourceRef="ExclusiveGateway_1pr5was" targetRef="ReceiveTask_1loxs2g">\n' +
             '      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">审核资料.data.status=="不通过"</bpmn:conditionExpression>\n' +
             '    </bpmn:sequenceFlow>\n' +
-            '    <bpmn:startEvent id="StartEvent_06toytj">\n' +
+            '    <bpmn:startEvent id="StartEvent_06toytj" name="开始">\n' +
             '      <bpmn:outgoing>SequenceFlow_0ii8l4d</bpmn:outgoing>\n' +
             '    </bpmn:startEvent>\n' +
             '    <bpmn:sequenceFlow id="SequenceFlow_0ii8l4d" sourceRef="StartEvent_06toytj" targetRef="ReceiveTask_1loxs2g" />\n' +
@@ -165,13 +165,12 @@ describe('test engine', async()=>{
             '      <bpmn:incoming>SequenceFlow_053cnrr</bpmn:incoming>\n' +
             '      <bpmn:outgoing>SequenceFlow_0qxsidm</bpmn:outgoing>\n' +
             '    </bpmn:receiveTask>\n' +
-            '    <bpmn:sequenceFlow id="SequenceFlow_0vkobon" sourceRef="ServiceTask_16fss4z" targetRef="ExclusiveGateway_05di7z3" />\n' +
-            '    <bpmn:sequenceFlow id="SequenceFlow_0hccz50" name="否" sourceRef="ExclusiveGateway_0w3lg3f" targetRef="ExclusiveGateway_05di7z3">\n' +
+            '    <bpmn:sequenceFlow id="SequenceFlow_0vkobon" sourceRef="ServiceTask_16fss4z" targetRef="ServiceTask_1nyqqf7" />\n' +
+            '    <bpmn:sequenceFlow id="SequenceFlow_0hccz50" name="否" sourceRef="ExclusiveGateway_0w3lg3f" targetRef="ServiceTask_1nyqqf7">\n' +
             '      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">整机测试.data.status=="不通过"</bpmn:conditionExpression>\n' +
             '    </bpmn:sequenceFlow>\n' +
-            '    <bpmn:parallelGateway id="ExclusiveGateway_05di7z3">\n' +
-            '      <bpmn:incoming>SequenceFlow_0hccz50</bpmn:incoming>\n' +
-            '      <bpmn:incoming>SequenceFlow_0vkobon</bpmn:incoming>\n' +
+            '    <bpmn:parallelGateway id="ExclusiveGateway_05di7z3" name="开始双方归档">\n' +
+            '      <bpmn:incoming>SequenceFlow_1d50lil</bpmn:incoming>\n' +
             '      <bpmn:outgoing>SequenceFlow_053cnrr</bpmn:outgoing>\n' +
             '      <bpmn:outgoing>SequenceFlow_0qtgazi</bpmn:outgoing>\n' +
             '    </bpmn:parallelGateway>\n' +
@@ -183,7 +182,7 @@ describe('test engine', async()=>{
             '    <bpmn:sequenceFlow id="SequenceFlow_0qtgazi" sourceRef="ExclusiveGateway_05di7z3" targetRef="ReceiveTask_0st5gqg" />\n' +
             '    <bpmn:sequenceFlow id="SequenceFlow_0qxsidm" sourceRef="RT_storeDevice" targetRef="ExclusiveGateway_14oe82k" />\n' +
             '    <bpmn:sequenceFlow id="SequenceFlow_1safbmu" sourceRef="ReceiveTask_0st5gqg" targetRef="ExclusiveGateway_14oe82k" />\n' +
-            '    <bpmn:parallelGateway id="ExclusiveGateway_14oe82k">\n' +
+            '    <bpmn:parallelGateway id="ExclusiveGateway_14oe82k" name="双方归档完成">\n' +
             '      <bpmn:incoming>SequenceFlow_0qxsidm</bpmn:incoming>\n' +
             '      <bpmn:incoming>SequenceFlow_1safbmu</bpmn:incoming>\n' +
             '      <bpmn:outgoing>SequenceFlow_1st7fgw</bpmn:outgoing>\n' +
@@ -193,10 +192,16 @@ describe('test engine', async()=>{
             '      <bpmn:outgoing>SequenceFlow_1buu5sa</bpmn:outgoing>\n' +
             '    </bpmn:serviceTask>\n' +
             '    <bpmn:sequenceFlow id="SequenceFlow_1st7fgw" sourceRef="ExclusiveGateway_14oe82k" targetRef="ServiceTask_04nl2xl" />\n' +
-            '    <bpmn:endEvent id="EndEvent_0chl8lr">\n' +
+            '    <bpmn:endEvent id="EndEvent_0chl8lr" name="结束">\n' +
             '      <bpmn:incoming>SequenceFlow_1buu5sa</bpmn:incoming>\n' +
             '    </bpmn:endEvent>\n' +
             '    <bpmn:sequenceFlow id="SequenceFlow_1buu5sa" sourceRef="ServiceTask_04nl2xl" targetRef="EndEvent_0chl8lr" />\n' +
+            '    <bpmn:serviceTask id="ServiceTask_1nyqqf7" name="等待归档">\n' +
+            '      <bpmn:incoming>SequenceFlow_0hccz50</bpmn:incoming>\n' +
+            '      <bpmn:incoming>SequenceFlow_0vkobon</bpmn:incoming>\n' +
+            '      <bpmn:outgoing>SequenceFlow_1d50lil</bpmn:outgoing>\n' +
+            '    </bpmn:serviceTask>\n' +
+            '    <bpmn:sequenceFlow id="SequenceFlow_1d50lil" sourceRef="ServiceTask_1nyqqf7" targetRef="ExclusiveGateway_05di7z3" />\n' +
             '  </bpmn:process>\n' +
             '  <bpmn:message id="Message_0fau62u" name="创建硬件产品">\n' +
             '    <bpmn:extensionElements>\n' +
@@ -402,6 +407,9 @@ describe('test engine', async()=>{
             '      </bpmndi:BPMNEdge>\n' +
             '      <bpmndi:BPMNShape id="StartEvent_06toytj_di" bpmnElement="StartEvent_06toytj">\n' +
             '        <dc:Bounds x="262" y="312" width="36" height="36" />\n' +
+            '        <bpmndi:BPMNLabel>\n' +
+            '          <dc:Bounds x="269" y="355" width="22" height="14" />\n' +
+            '        </bpmndi:BPMNLabel>\n' +
             '      </bpmndi:BPMNShape>\n' +
             '      <bpmndi:BPMNEdge id="SequenceFlow_0ii8l4d_di" bpmnElement="SequenceFlow_0ii8l4d">\n' +
             '        <di:waypoint x="280" y="312" />\n' +
@@ -532,30 +540,34 @@ describe('test engine', async()=>{
             '      </bpmndi:BPMNShape>\n' +
             '      <bpmndi:BPMNEdge id="SequenceFlow_0vkobon_di" bpmnElement="SequenceFlow_0vkobon">\n' +
             '        <di:waypoint x="290" y="620" />\n' +
-            '        <di:waypoint x="290" y="700" />\n' +
-            '        <di:waypoint x="845" y="700" />\n' +
+            '        <di:waypoint x="290" y="770" />\n' +
+            '        <di:waypoint x="660" y="770" />\n' +
             '      </bpmndi:BPMNEdge>\n' +
             '      <bpmndi:BPMNEdge id="SequenceFlow_0hccz50_di" bpmnElement="SequenceFlow_0hccz50">\n' +
             '        <di:waypoint x="870" y="605" />\n' +
-            '        <di:waypoint x="870" y="675" />\n' +
+            '        <di:waypoint x="870" y="670" />\n' +
+            '        <di:waypoint x="700" y="670" />\n' +
+            '        <di:waypoint x="700" y="730" />\n' +
             '        <bpmndi:BPMNLabel>\n' +
-            '          <dc:Bounds x="881" y="635" width="11" height="14" />\n' +
+            '          <dc:Bounds x="774" y="647" width="11" height="14" />\n' +
             '        </bpmndi:BPMNLabel>\n' +
             '      </bpmndi:BPMNEdge>\n' +
             '      <bpmndi:BPMNShape id="ParallelGateway_1kqz2q1_di" bpmnElement="ExclusiveGateway_05di7z3">\n' +
-            '        <dc:Bounds x="845" y="675" width="50" height="50" />\n' +
+            '        <dc:Bounds x="925" y="745" width="50" height="50" />\n' +
+            '        <bpmndi:BPMNLabel>\n' +
+            '          <dc:Bounds x="917" y="721" width="66" height="14" />\n' +
+            '        </bpmndi:BPMNLabel>\n' +
             '      </bpmndi:BPMNShape>\n' +
             '      <bpmndi:BPMNEdge id="SequenceFlow_053cnrr_di" bpmnElement="SequenceFlow_053cnrr">\n' +
-            '        <di:waypoint x="895" y="700" />\n' +
-            '        <di:waypoint x="1080" y="700" />\n' +
-            '        <di:waypoint x="1080" y="730" />\n' +
+            '        <di:waypoint x="975" y="770" />\n' +
+            '        <di:waypoint x="1030" y="770" />\n' +
             '      </bpmndi:BPMNEdge>\n' +
             '      <bpmndi:BPMNShape id="ReceiveTask_0st5gqg_di" bpmnElement="ReceiveTask_0st5gqg">\n' +
             '        <dc:Bounds x="1030" y="890" width="100" height="80" />\n' +
             '      </bpmndi:BPMNShape>\n' +
             '      <bpmndi:BPMNEdge id="SequenceFlow_0qtgazi_di" bpmnElement="SequenceFlow_0qtgazi">\n' +
-            '        <di:waypoint x="870" y="725" />\n' +
-            '        <di:waypoint x="870" y="930" />\n' +
+            '        <di:waypoint x="950" y="795" />\n' +
+            '        <di:waypoint x="950" y="930" />\n' +
             '        <di:waypoint x="1030" y="930" />\n' +
             '      </bpmndi:BPMNEdge>\n' +
             '      <bpmndi:BPMNEdge id="SequenceFlow_0qxsidm_di" bpmnElement="SequenceFlow_0qxsidm">\n' +
@@ -570,6 +582,9 @@ describe('test engine', async()=>{
             '      </bpmndi:BPMNEdge>\n' +
             '      <bpmndi:BPMNShape id="ParallelGateway_0byqz4m_di" bpmnElement="ExclusiveGateway_14oe82k">\n' +
             '        <dc:Bounds x="1205" y="825" width="50" height="50" />\n' +
+            '        <bpmndi:BPMNLabel>\n' +
+            '          <dc:Bounds x="1117" y="840" width="66" height="14" />\n' +
+            '        </bpmndi:BPMNLabel>\n' +
             '      </bpmndi:BPMNShape>\n' +
             '      <bpmndi:BPMNShape id="ServiceTask_04nl2xl_di" bpmnElement="ServiceTask_04nl2xl">\n' +
             '        <dc:Bounds x="1330" y="810" width="100" height="80" />\n' +
@@ -580,211 +595,341 @@ describe('test engine', async()=>{
             '      </bpmndi:BPMNEdge>\n' +
             '      <bpmndi:BPMNShape id="EndEvent_0chl8lr_di" bpmnElement="EndEvent_0chl8lr">\n' +
             '        <dc:Bounds x="1512" y="832" width="36" height="36" />\n' +
+            '        <bpmndi:BPMNLabel>\n' +
+            '          <dc:Bounds x="1519" y="875" width="22" height="14" />\n' +
+            '        </bpmndi:BPMNLabel>\n' +
             '      </bpmndi:BPMNShape>\n' +
             '      <bpmndi:BPMNEdge id="SequenceFlow_1buu5sa_di" bpmnElement="SequenceFlow_1buu5sa">\n' +
             '        <di:waypoint x="1430" y="850" />\n' +
             '        <di:waypoint x="1512" y="850" />\n' +
+            '      </bpmndi:BPMNEdge>\n' +
+            '      <bpmndi:BPMNShape id="ServiceTask_1nyqqf7_di" bpmnElement="ServiceTask_1nyqqf7">\n' +
+            '        <dc:Bounds x="660" y="730" width="100" height="80" />\n' +
+            '      </bpmndi:BPMNShape>\n' +
+            '      <bpmndi:BPMNEdge id="SequenceFlow_1d50lil_di" bpmnElement="SequenceFlow_1d50lil">\n' +
+            '        <di:waypoint x="760" y="770" />\n' +
+            '        <di:waypoint x="925" y="770" />\n' +
             '      </bpmndi:BPMNEdge>\n' +
             '    </bpmndi:BPMNPlane>\n' +
             '  </bpmndi:BPMNDiagram>\n' +
             '</bpmn:definitions>\n');
     });
 
-    it('get tasks', async() =>{
+    it('get tasks', async () => {
         const tasks = e.getTasks();
-        ['硬件项目资料','审核资料','指定FAE','提交硬件结构资料是否有整机','提供案例音频，音频测试','音频测试','提交编译链','商务确认','提供调试算法库','提供整机音频','整机音频测试','整机测试','已收到整机','开始测试','测试完成','客户归档','中台归档','归档']
-            .forEach(name=>{
+        ['硬件项目资料', '审核资料', '指定FAE', '等待归档','提交硬件结构资料是否有整机', '提供案例音频，音频测试', '音频测试', '提交编译链', '商务确认', '提供调试算法库', '提供整机音频', '整机音频测试', '整机测试', '已收到整机', '开始测试', '测试完成', '客户归档', '中台归档', '归档']
+            .forEach(name => {
                 console.log('to find', name);
-                expect(tasks.find(t=>t.name==name)).toBeTruthy()
+                expect(tasks.find(t => t.name == name)).toBeTruthy()
             });
     });
 
-    it('get task', async() =>{
-        const task = e.getTaskByName('提交硬件结构资料是否有整机');
-        expect(task.name).toEqual('提交硬件结构资料是否有整机');
-        expect(task.id).toEqual('RT_submitHWInfo');
+    it('get task', async () => {
+        {
+            const task = e.getTaskByName('提交硬件结构资料是否有整机');
+            expect(task.name).toEqual('提交硬件结构资料是否有整机');
+            expect(task.isReceiveTask).toBeTruthy();
+        }
+
+        {
+            const task = e.getTaskByName('音频测试');
+            expect(task.name).toEqual('音频测试');
+            expect(task.isServiceTask).toBeTruthy();
+        }
     });
 
-    it('all yes go', async ()=>{
+    it('all yes go', async () => {
         const varaibles = {
-            审核资料:{data:{status:'通过'}},
-            音频测试:{data:{status:'通过'}},
-            商务确认:{data:{status:'通过'}},
-            整机音频测试:{data:{status:'通过'}},
-            提供调试算法库:{data:{status:'通过'}},
-            整机测试:{data:{status:'通过'}},
+            审核资料: {data: {status: '通过'}},
+            音频测试: {data: {status: '通过'}},
+            商务确认: {data: {status: '通过'}},
+            整机音频测试: {data: {status: '通过'}},
+            提供调试算法库: {data: {status: '通过'}},
+            整机测试: {data: {status: '通过'}},
         };
-        let next = e.nextProcess({isStart:true}, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('硬件项目资料');
+        let next = e.nextProcess({isStart: true}, varaibles);
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('硬件项目资料');
+
+        next = e.nextProcess(next, varaibles, '审核资料');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('审核资料');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('审核资料');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('指定FAE');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('指定FAE');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提交硬件结构资料是否有整机');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提交硬件结构资料是否有整机');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供案例音频，音频测试');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供案例音频，音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('音频测试');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提交编译链');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提交编译链');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供调试算法库');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供调试算法库');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供整机音频');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供整机音频');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('整机音频测试');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('整机音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('整机测试');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('整机测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('已收到整机');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('已收到整机');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('开始测试');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('开始测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('测试完成');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('测试完成');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('等待归档');
 
         next = e.nextProcess(next, varaibles);
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('归档');
+        expect(next.length).toEqual(2);
+        expect(next).toContain(e.getTaskByName('客户归档'));
+        expect(next).toContain(e.getTaskByName('中台归档'));
+
+        next = e.nextProcess(next, varaibles);
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('归档');
 
         next = e.nextProcess(next, varaibles)[0];
         expect(next.isEnd).toEqual(true);
-
     });
 
-    it('error if can not go', async()=>{
-        let next = e.nextProcess({isStart:true}, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('硬件项目资料');
+    it('error if can not go', async () => {
+        let next = e.nextProcess({isStart: true}, {});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('硬件项目资料');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('审核资料');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('审核资料');
 
         try {
             next = e.nextProcess(next, {审核资料: {data: {status: '随便写点'}}});
             throw 'not here'
-        }catch (e) {
+        } catch (e) {
             console.log(e);
             expect(e).not.toEqual('not here');
         }
 
         next = e.nextProcess(next, {审核资料: {data: {status: '通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('指定FAE');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('指定FAE');
     });
 
-    it('every x fail once', async() =>{
-        let next = e.nextProcess({isStart:true}, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('硬件项目资料');
+    it('stop at parallel gateway', async()=>{
+        const dones = [e.getTaskByName('等待归档')];
+        let next = e.nextProcess(dones, {});
+        expect(next).toHaveLength(2);
+        expect(next).toContain(e.getTaskByName('中台归档'));
+        expect(next).toContain(e.getTaskByName('客户归档'));
+
+        next = e.nextProcess(next[0], {});
+        expect(next).toHaveLength(1);
+        expect(next).toContain(e.getTaskByName('双方归档完成'));
+        expect(next[0]).toHaveProperty('isParallelGateway', true);
+    });
+
+    it('every x fail once', async () => {
+        let next = e.nextProcess({isStart: true}, {});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('硬件项目资料');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('审核资料');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('审核资料');
 
-        next = e.nextProcess(next, {审核资料:{data:{status:'不通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('硬件项目资料');
-
-        next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('审核资料');
-
-        next = e.nextProcess(next, {审核资料:{data:{status:'通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('指定FAE');
+        next = e.nextProcess(next, {审核资料: {data: {status: '不通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('硬件项目资料');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提交硬件结构资料是否有整机');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('审核资料');
+
+        next = e.nextProcess(next, {审核资料: {data: {status: '通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('指定FAE');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供案例音频，音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提交硬件结构资料是否有整机');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('音频测试');
-
-        next = e.nextProcess(next, {音频测试:{data:{status:'不通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供案例音频，音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供案例音频，音频测试');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('音频测试');
 
-        next = e.nextProcess(next, {音频测试:{data:{status:'通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提交编译链');
-
-        next = e.nextProcess(next, {商务确认:{data:{status:'等待'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('商务确认');
-
-        next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供调试算法库');
-
-        next = e.nextProcess(next, {提供调试算法库:{data:{status:'不通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提交编译链');
-
-        next = e.nextProcess(next, {商务确认:{data:{status:'通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供调试算法库');
-
-        next = e.nextProcess(next, {提供调试算法库:{data:{status:'通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供整机音频');
+        next = e.nextProcess(next, {音频测试: {data: {status: '不通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供案例音频，音频测试');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('整机音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('音频测试');
 
-        next = e.nextProcess(next, {整机音频测试:{data:{status:'不通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('提供整机音频');
+        next = e.nextProcess(next, {音频测试: {data: {status: '通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提交编译链');
+
+        next = e.nextProcess(next, {商务确认: {data: {status: '等待'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('商务确认');
 
         next = e.nextProcess(next, {});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('整机音频测试');
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供调试算法库');
 
-        next = e.nextProcess(next, {整机音频测试:{data:{status:'通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('整机测试');
+        next = e.nextProcess(next, {提供调试算法库: {data: {status: '不通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提交编译链');
 
-        next = e.nextProcess(next, {整机测试:{data:{status:'不通过'}}});
-        next = next[0];expect(next.isReceiveTask).toEqual(true);
-        expect(next.task.name).toEqual('归档');
+        next = e.nextProcess(next, {商务确认: {data: {status: '通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供调试算法库');
+
+        next = e.nextProcess(next, {提供调试算法库: {data: {status: '通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供整机音频');
+
+        next = e.nextProcess(next, {});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('整机音频测试');
+
+        next = e.nextProcess(next, {整机音频测试: {data: {status: '不通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('提供整机音频');
+
+        next = e.nextProcess(next, {});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('整机音频测试');
+
+        next = e.nextProcess(next, {整机音频测试: {data: {status: '通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isReceiveTask).toEqual(true);
+        expect(next.name).toEqual('整机测试');
+
+        next = e.nextProcess(next, {整机测试: {data: {status: '不通过'}}});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('等待归档');
+
+        next = e.nextProcess(next, {});
+        expect(next.length).toEqual(2);
+        expect(next).toContain(e.getTaskByName('客户归档'));
+        expect(next).toContain(e.getTaskByName('中台归档'));
+
+        next = e.nextProcess(next, {});
+        expect(next.length).toEqual(1);
+        next = next[0];
+        expect(next.isServiceTask).toEqual(true);
+        expect(next.name).toEqual('归档');
 
         next = e.nextProcess(next, {})[0];
         expect(next.isEnd).toEqual(true);

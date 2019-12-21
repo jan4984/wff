@@ -1,4 +1,4 @@
-const {Line, Step} = require('./model');
+const {Line, Step, Model} = require('./model');
 const StartStep = require('./start-event');
 const EndStep = require('./end-event');
 const ExclusiveStep = require('./exclusive-gateway');
@@ -36,10 +36,20 @@ function _parseNext(nodes, step, refs) {
         let targetStep;
         targetStep = refs.find(r=>r.id == target.task.id);
         if(!targetStep) {
+            if(!target.task.name) throw `all step must has name, but ${target.task.id} not`;
+            for(const ref = refs.find(r=>r.name == target.task.name); ref ;){
+                throw `name ${target.name} have been used by node ${ref.id}`;
+            }
             const props = {id:target.task.id, in:[], out:[], node:target.task};
             if (target.isEnd) targetStep = new EndStep(props);
             else if (target.isServiceTask) targetStep = new ServiceStep(props);
-            else if (target.isReceiveTask) targetStep = new ReceiveStep(props);
+            else if (target.isReceiveTask) {
+                const msg = nodes.bpmn_message.find(n=>n.id==target.task.messageRef);
+                if(!msg) throw `can not find message ${target.task.messageRef} definition`;
+                if(!msg.name) throw `message ${target.task.messageRef} not have name`;
+                props.message = msg.name;
+                targetStep = new ReceiveStep(props);
+            }
             else if (target.isExclusiveGateway) targetStep = new ExclusiveStep(props);
             else if (target.isParallelGateway) targetStep = new ParallelStep(props);
             else throw 'unknown step type';
@@ -126,6 +136,7 @@ function parse(xmlString){
     }
     const json = xml.parse(xmlString, parserOptions);
     const nodes = json.bpmn_definitions.bpmn_process;
+    nodes.bpmn_message = json.bpmn_definitions.bpmn_message;
     const stepTypes = ['bpmn_exclusiveGateway', 'bpmn_serviceTask', 'bpmn_sequenceFlow', 'bpmn_startEvent', 'bpmn_receiveTask', 'bpmn_parallelGateway', 'bpmn_endEvent'];
     stepTypes.forEach(t=>{
         if(nodes[t] && !Array.isArray(nodes[t])){
@@ -148,9 +159,9 @@ function parse(xmlString){
     const lineShape = new Line({id:line.id, in:startStep,out:null, exp:line.bpmn_conditionExpression && line.bpmn_conditionExpression['#text']});
     startStep.out = [lineShape];
     _parseAll(nodes, startStep);
-    return startStep
+    return new Model(startStep);
 }
 
 module.exports = {
     parse
-}
+};
