@@ -37,7 +37,7 @@ async function get(props) {
     WF.init({
         content: {type: DataTypes.TEXT, allowNull: false},
         default: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
-        deleted: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+        status: {type: DataTypes.STRING, allowNull: false, defaultValue: 'normal'}
     }, {
         sequelize: db,
         modelName: 'workflow'
@@ -45,7 +45,7 @@ async function get(props) {
     WFI.init({
         id: {type: DataTypes.STRING, primaryKey: true},
         variables: {type: DataTypes.JSON, allowNull: false, defaultValue: {}},
-        deleted: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+        status: {type: DataTypes.STRING, allowNull: false, defaultValue: 'processing'}
     }, {
         sequelize: db,
         modelName: 'instance'
@@ -74,7 +74,7 @@ async function get(props) {
     File.belongsTo(WFI);
 
     await db.authenticate();
-    await db.sync({force: true});
+    await db.sync({force:!!props.recreate});
     return db;
 }
 

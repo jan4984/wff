@@ -10,7 +10,7 @@ class OperationHistoryService {
     }
 
     async getWorkflows() {
-        return DBSerivce.models.WF.findAll({where: {deleted: false}});
+        return DBSerivce.models.WF.findAll({where: {status: {[Op.ne]: 'deleted'}}});
     }
 
     async addWorkflow(workflow) {
@@ -18,11 +18,11 @@ class OperationHistoryService {
     }
 
     async getInstances() {
-        return DBSerivce.models.WFI.findAll({where: {deleted: false}});
+        return DBSerivce.models.WFI.findAll({where: {status: {[Op.ne]: 'deleted'}}});
     }
 
-    async getInstanceId(instanceId) {
-        return DBSerivce.models.WFI.findOne({where: {id: instanceId, deleted: false}});
+    async getInstanceById(instanceId) {
+        return DBSerivce.models.WFI.findOne({where: {id: instanceId}});
     }
 
     async getInstancesByWorkflowId(workflowId) {
@@ -37,8 +37,21 @@ class OperationHistoryService {
         return DBSerivce.models.WFI.create(instance);
     }
 
+    async updateInstance(instanceId, vars) {
+        return DBSerivce.models.WFI.update({variables: vars}, {where: {id: instanceId}});
+    }
+
+    async endInstance(instanceId) {
+        return DBSerivce.models.WFI.update({status: 'end'}, {where: {id: instanceId}});
+    }
+
     async getLastOperationByInstanceId(instanceId) {
-        return DBSerivce.models.OP.findOne({where: {instanceId: instanceId}});
+        return DBSerivce.models.OP.findOne(
+            {
+                where: {instanceId: instanceId},
+                order: [['createdAt', 'DESC']],
+                limit: 1
+            });
     }
 
     async getDefaultWorkflow() {
@@ -146,16 +159,16 @@ class OperationHistoryService {
                 }, {
                     where: {
                         id: {[Op.in]: files},
-                        workflowInstanceId: instanceKey
+                        instanceId: instanceKey
                     },
                     transaction: t
                 });
             }
             return fileAction.then(() => DBSerivce.models.OP.create({
-                operationName: processName,
-                operationData: data,
-                fileData: files,
-                workflowInstanceId: instanceKey,
+                name: processName,
+                data: data,
+                files: files,
+                instanceId: instanceKey,
             }, {
                 transaction: t
             }));
@@ -168,10 +181,10 @@ class OperationHistoryService {
             throw 'no workflow instance key specified';
         } else if (processName) {
             let result = await DBSerivce.models.OP.findOne({
-                attributes: [['operationData', 'data'], ['fileData', 'files'], 'createdAt'],
+                attributes: ['data', 'files', 'createdAt'],
                 where: {
-                    workflowInstanceId: instanceKey,
-                    operationName: processName
+                    instanceId: instanceKey,
+                    name: processName
                 },
                 order: [['createdAt', 'DESC']]
             });
