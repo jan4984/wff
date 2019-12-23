@@ -97,9 +97,11 @@ describe('__tests__ workflow framework', ()=> {
         });
 
         const var1 = {key1: 'value1'};
-        await wff.addOperation(wfi, '硬件项目资料', var1);
+        const file1 = ['123', '456'];
+        await wff.addOperation(wfi, '硬件项目资料', var1, file1);
         const result = await wff.getOperation(wfi, '硬件项目资料');
         expect(var1).toEqual(result.data);
+        expect(file1).toEqual(result.files);
         await sleep(50);
 
         const var2 = {key2: 'value2'};
