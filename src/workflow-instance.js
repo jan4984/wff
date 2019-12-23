@@ -43,6 +43,10 @@ class WorkflowInstance extends EventEmitter {
     async message(task, vars, files) {
         for (const item of this.next) {
             if (item.isReceiveTask && item.message === task) {
+                if (this.handlers[task] && this.handlers[task].preHandler) {
+                    await this.handlers[task].preHandler(this.id, task, this.vars);
+                }
+
                 try {
                     const dones = this.dones;
                     const params = this.vars;
@@ -50,6 +54,7 @@ class WorkflowInstance extends EventEmitter {
                     params[task] = {};
                     params[task].data = vars || {};
                     params[task].files = files || [];
+
                     const next = this.engine.nextProcess(dones, params);
                     if (next[0].isParallelGateway) {
                         this.dones.push(item);
@@ -61,6 +66,10 @@ class WorkflowInstance extends EventEmitter {
                     this.vars = params;
                     this.next = next;
                     this._process();
+
+                    if (this.handlers[task] && this.handlers[task].postHandler) {
+                        await this.handlers[task].postHandler(this.id, task, this.vars);
+                    }
                     return true;
                 } catch (e) {
                     console.log(e);
