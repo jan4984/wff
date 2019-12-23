@@ -1,6 +1,7 @@
 const uuid = require('uuid/v4');
 const fs = require('fs');
-var crypto = require('crypto');
+const crypto = require('crypto');
+const DBService = require('./db-service');
 const {OperationHistoryService} = require('./op-history-service');
 const {parse} = require('./engine');
 const WorkflowInstance = require('./workflow-instance');
@@ -25,6 +26,8 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async initialize(props) {
+        await DBService.get(props.dbInfo);
+        
         for (const workflow of await this.dbService.getWorkflows()) {
             await this._addWorkflow(workflow);
         }
