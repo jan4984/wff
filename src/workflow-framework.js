@@ -131,8 +131,8 @@ class WorkflowFramework {
     }
 
     async _addInstance(instance) {
-        const workflow = this.workflows[instance.workflowId];
-        const wfi = new WorkflowInstance(instance.id, workflow.engine);
+        const engine = this.workflows[instance.workflowId];
+        const wfi = new WorkflowInstance(instance.id, engine);
         await wfi.initialize();
         this.instances[instance.id] = wfi;
     }

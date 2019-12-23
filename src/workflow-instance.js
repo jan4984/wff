@@ -16,11 +16,12 @@ class WorkflowInstance {
         this.jobHandlers = {};
         this.dbService = new OperationHistoryService();
 
-        this.next = null;
+        this.next = {isStart: true};
         this.complete = {
             success: this._success.bind(this),
             failure: this._failure.bind(this),
         };
+
     }
 
     message(task) {
@@ -35,15 +36,15 @@ class WorkflowInstance {
         if (instance)
         this.vars = instance.variables;
         operation && (this.next = operation.name);
+        this._process();
     }
 
     _process() {
-        !this.next && (this.next = {isStart: true});
         this.next = this.engine.nextProcess(this.next, this.vars);
 
         if (this.next.isServiceTask) {
             if (!this.jobHandlers.hasOwnProperty(this.next.name)) {
-                log.warning('job', this.next.name, 'has no handler, instance id=', this.instanceId);
+                log.warning('job', this.next.name, 'has no handler, instance id=', this.id);
             } else {
                 const job = {};
                 this.jobHandlers[this.next.name](job)
