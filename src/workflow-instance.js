@@ -61,7 +61,7 @@ class WorkflowInstance extends EventEmitter {
                         this.dones.push(item);
                         return true;
                     }
-                    await this.dbService.addOperation(this.id, task, vars);
+                    await this.dbService.addOperation(this.id, task, vars, files || []);
                     await this.dbService.updateInstance(this.id, this.vars);
                     this.dones = [];
                     this.vars = params;
