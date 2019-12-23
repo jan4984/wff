@@ -162,7 +162,7 @@ class WorkflowFramework {
             this.endList[instance.id] = null;
         } else {
             const workflow = this.workflows[instance.workflowId];
-            const wfi = new WorkflowInstance(instance.id, workflow);
+            const wfi = new WorkflowInstance(instance.id, workflow, this.hookers);
             await wfi.initialize();
             this.processList[instance.id] = wfi;
             wfi.on('end', this._onInstanceEnd.bind(this));

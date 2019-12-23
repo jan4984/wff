@@ -10,12 +10,13 @@ const {Logger} = require('./utils');
 const log = Logger({tag:'workflow-instance'});
 
 class WorkflowInstance extends EventEmitter {
-    constructor(id, workflow) {
+    constructor(id, workflow, hookers) {
         super();
         this.id = id;
         this.vars = {};
         this.engine = workflow.engine;
         this.handlers = workflow.handlers;
+        this.hookers = hookers;
         this.dbService = new OperationHistoryService();
 
         this.next = [];
@@ -43,8 +44,8 @@ class WorkflowInstance extends EventEmitter {
     async message(task, vars, files) {
         for (const item of this.next) {
             if (item.isReceiveTask && item.message === task) {
-                if (this.handlers[task] && this.handlers[task].preHandler) {
-                    await this.handlers[task].preHandler(this.id, task, this.vars);
+                if (this.hookers[task] && this.hookers[task].preHandler) {
+                    await this.hookers[task].preHandler(this.id, task, this.vars);
                 }
 
                 try {
@@ -67,8 +68,8 @@ class WorkflowInstance extends EventEmitter {
                     this.next = next;
                     this._process();
 
-                    if (this.handlers[task] && this.handlers[task].postHandler) {
-                        await this.handlers[task].postHandler(this.id, task, this.vars);
+                    if (this.hookers[task] && this.hookers[task].postHandler) {
+                        await this.hookers[task].postHandler(this.id, task, this.vars);
                     }
                     return true;
                 } catch (e) {
