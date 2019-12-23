@@ -87,7 +87,7 @@ class WorkflowInstance extends EventEmitter {
                         success: this._success.bind(this, task),
                         failure: this._failure.bind(this, task)
                     };
-                    this.handlers[task.name](task.name, this.vars, complete)
+                    this.handlers[task.name](task.id, task.name, this.vars, complete)
                         .catch(e => complete.failure(e));
                 }
             } else if (task.isEnd) {

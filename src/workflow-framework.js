@@ -188,12 +188,12 @@ class WorkflowFramework {
         delete this.processList[instanceId];
     }
 
-    async _handler(task, vars, complete) {
-        console.log('in task handler', task, vars);
+    async _handler(instanceId, task, vars, complete) {
+        console.log('in task handler', instanceId, task, vars);
 
         async function hook(handler) {
             let result = true;
-            result = await handler(task, vars)
+            result = await handler(instanceId, task, vars)
                 .catch(e => {
                     console.log('exception in handler of', task, e);
                     result = false;
@@ -204,7 +204,7 @@ class WorkflowFramework {
         const hooker = this.hookers[task];
         if (hooker && hooker.jobHandler) {
             let result = true;
-            let retData = await hooker.jobHandler(task, vars)
+            let retData = await hooker.jobHandler(instanceId, task, vars)
                 .catch(e => {
                     console.log('exception in handler of', task, e);
                     result = false;
