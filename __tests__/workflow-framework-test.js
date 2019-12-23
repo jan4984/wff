@@ -11,7 +11,22 @@ const dbConfig = {
     recreate: true
 };
 
-const wff = new WorkflowFramework();
+async function hookerTest(instanceId, task, vars) {
+    return {status: '通过'};
+}
+
+async function postHandlerTest(instanceId, task, vars) {
+    console.log('aaaa');
+}
+
+const hookers = {
+    '音频测试': {jobHandler: hookerTest},
+    '整机音频测试': {jobHandler: hookerTest},
+    '等待归档': {jobHandler: hookerTest},
+    '硬件项目资料': {postHandler: postHandlerTest}
+};
+
+const wff = new WorkflowFramework(hookers);
 let wfi = null;
 
 const sleep = async (ms)=> {

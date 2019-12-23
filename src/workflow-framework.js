@@ -21,7 +21,7 @@ class WorkflowFramework {
     }
 
     /*
-     * Workflow initialization, include connecting zeebe broker, connecting database
+     * Workflow framework initialization
      * @param {Object} props
      * @returns {Promise<>}
      */
@@ -38,9 +38,10 @@ class WorkflowFramework {
     }
 
     /*
-     * Deploy workflow(s)
+     * Deploy workflow
      * @param {String} bpmnFile - A path to .bpmn files
-     * @returns {Promise<string>} workflow id
+     * @param {Boolean} def - Set workflow as default or not
+     * @returns {Promise<Number>} workflow id
      */
     async deployWorkflow(bpmnFile, def = true) {
         const content = fs.readFileSync(bpmnFile);
@@ -54,14 +55,26 @@ class WorkflowFramework {
         }
     }
 
+    /*
+     * Delete workflow
+     * @param {Number} workflowId - Workflow id
+     * @returns {Promise<>}
+     */
     async deleteWorkflow(workflowId) {
-
+        //const result = await this.dbService.getProcessingCount();
+        // const result = 0;
+        // if (result > 0) {
+        //     throw 'can not delete workflow while instances are in process';
+        // } else {
+        //     return this.dbService.deleteWorkflow(workflowId);
+        // }
     }
 
     /*
      * Create a workflow instance
      * @param {Object} [vars] - Payload to pass in to the workflow
-     * @returns {Promise<string>} workflow instance information
+     * @param {Number} [workflowId] - Workflow id, use default workflow while it is null
+     * @returns {Promise<String>} workflow instance id
      */
     async createWorkflowInstance(vars, workflowId) {
         workflowId || (workflowId = this.defaultWorkflowId);
@@ -81,57 +94,65 @@ class WorkflowFramework {
 
     /*
      * Delete a workflow instance
-     * @param {String} workflowInstanceKey
+     * @param {String} instanceId - Workflow instance id
      * @returns {Promise<>}
      */
     async deleteWorkflowInstance(instanceId) {
-
+        this._instanceCheck(instanceId);
+        await this.dbService.deleteInstance(instanceId);
+        delete this.processList[instanceId];
+        delete this.endList[instanceId];
     }
 
+    /*
+     * Get workflow instance status
+     * @param {String} instanceId - Workflow instance id
+     * @returns {Promise<Object>}
+     */
     getWorkflowInstanceState(instanceId) {
         if (this.endList.hasOwnProperty(instanceId)) {
             return {status: 'end', currentTasks: []};
         } else if (this.processList.hasOwnProperty(instanceId)) {
             return {status: 'processing', currentTasks: this.processList[instanceId].getCurrentTasks()};
         } else {
-            return {status: 'not exist'};
+            return {status: 'nonexistent'};
         }
     }
 
     /*
      * Append a workflow operation by push message
-     * @param {String} workflowInstanceKey
-     * @param {String} processName
+     * @param {String} instanceId - Workflow instance id
+     * @param {String} processName - Process name
      * @param {Object} [data] - Variables published with the message
-     * @param {Array} [files] - Files related to this workflow instance
+     * @param {Array} [files] - Files related to this operation
      * @returns {Promise<>}
      */
-    async addOperation(instanceId, task, data, files) {
+    async addOperation(instanceId, processName, data, files) {
         this._instanceCheck(instanceId);
-        await this.processList[instanceId].message(task, data, files);
+        await this.processList[instanceId].message(processName, data, files);
     }
 
     /*
      * Append a workflow operation directly into database
-     * @param {String} workflowInstanceKey
-     * @param {String} processName
+     * @param {String} instanceId - Workflow instance id
+     * @param {String} processName - Process name
      * @param {Object} [data] - Variables published with the message
      * @param {Array} [files] - Files related to this workflow instance
-     * @returns {Promise<Object>}
+     * @returns {Promise<>}
      */
     async recordOperation(instanceId, processName, data, files) {
         this._instanceCheck(instanceId);
-        return this.dbService.addOperation(instanceId, processName, data, files);
+        await this.dbService.addOperation(instanceId, processName, data, files);
     }
 
     /*
-     * Get the data of a workflow operation(the latest one)
-     * @param {String} workflowInstanceKey
-     * @param {String} processName
+     * Get the data of a workflow instance operation(the latest one)
+     * @param {String} instanceId - Workflow instance id
+     * @param {String} processName - Process name
      * @returns {Promise<Object>}
      */
     async getOperation(instanceId, processName) {
-        return this.dbService.findOperationByInstanceKey(instanceId, processName);
+        return this.dbService.getOperationByInstanceId(instanceId, processName);
     }
 
     async _addWorkflow(workflow) {
@@ -191,47 +212,24 @@ class WorkflowFramework {
     async _handler(instanceId, task, vars, complete) {
         console.log('in task handler', instanceId, task, vars);
 
-        async function hook(handler) {
-            let result = true;
-            result = await handler(instanceId, task, vars)
-                .catch(e => {
-                    console.log('exception in handler of', task, e);
-                    result = false;
-                });
-            return result;
-        }
+        const invokeHooker = async (handler) => {
+            if (handler) {
+                return handler(instanceId, task, vars)
+            }
+        };
 
         const hooker = this.hookers[task];
-        if (hooker && hooker.jobHandler) {
-            let result = true;
-            let retData = await hooker.jobHandler(instanceId, task, vars)
-                .catch(e => {
-                    console.log('exception in handler of', task, e);
-                    result = false;
-                });
-            if (!result) {
-                await complete.failure();
-            } else {
-                await complete.success(retData);
-            }
-            return;
-        }
-
-        if (hooker && hooker.preHandler) {
-            if (!await hook(hooker.preHandler)) {
-                console.log('fail in preHandler of', task);
-                return complete.failure();
+        if (hooker) {
+            try {
+                await invokeHooker(hooker.preHandler);
+                const result = await invokeHooker(hooker.jobHandler);
+                await invokeHooker(hooker.postHandler);
+                return await complete.success(result);
+            } catch (e) {
+                console.log('exception in handler of', task, e);
             }
         }
-
-        if (hooker && hooker.postHandler) {
-            if (!await hook(hooker.postHandler)) {
-                console.log('fail in postHandler of', task);
-                return complete.failure();
-            }
-        }
-
-        await complete.success({status: '通过'});
+        return complete.failure();
     }
 }
 

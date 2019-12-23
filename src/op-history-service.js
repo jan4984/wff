@@ -14,11 +14,23 @@ class OperationHistoryService {
     }
 
     async addWorkflow(workflow) {
-        return DBSerivce.models.WF.create(workflow);
+        const db = await DBSerivce.get();
+        return db.transaction(t => {
+            return (workflow.default ? DBSerivce.models.WF.update({default: false}, {where: {}, transaction: t}) : Promise.resolve())
+                .then(() => { return DBSerivce.models.WF.create(workflow, {transaction: t}) });
+        });
+    }
+
+    async deleteWorkflow(workflowId) {
+        return DBSerivce.models.WF.update({status: 'deleted'}, {where: {id: workflowId}});
     }
 
     async getInstances() {
         return DBSerivce.models.WFI.findAll({where: {status: {[Op.ne]: 'deleted'}}});
+    }
+
+    async getInstancesByWorkflowId() {
+        return DBSerivce.models.WFI.findAll({})
     }
 
     async getInstanceById(instanceId) {
@@ -41,17 +53,28 @@ class OperationHistoryService {
         return DBSerivce.models.WFI.update({variables: vars}, {where: {id: instanceId}});
     }
 
+    async deleteInstance(instanceId) {
+        return DBSerivce.models.WFI.update({status: 'deleted'}, {where: {id: instanceId}});
+    }
+
     async endInstance(instanceId) {
         return DBSerivce.models.WFI.update({status: 'end'}, {where: {id: instanceId}});
     }
 
     async getLastOperationByInstanceId(instanceId) {
-        return DBSerivce.models.OP.findOne(
-            {
-                where: {instanceId: instanceId},
-                order: [['createdAt', 'DESC']],
-                limit: 1
-            });
+        return DBSerivce.models.OP.findOne({
+            where: {instanceId: instanceId},
+            order: [['createdAt', 'DESC']],
+            limit: 1
+        });
+    }
+
+    async getOperationByInstanceId(instanceId, processName) {
+        return DBSerivce.models.OP.findOne({
+            where: {instanceId: instanceId, name: processName},
+            order: [['createdAt', 'DESC']],
+            limit: 1
+        });
     }
 
     async getDefaultWorkflow() {

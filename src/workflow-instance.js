@@ -1,10 +1,5 @@
-const uuid = require('uuid/v4');
-const fs = require('fs');
 const EventEmitter = require('events');
-const DBService = require('./db-service');
-var crypto = require('crypto');
 const {OperationHistoryService} = require('./op-history-service');
-const {BpmnEngine} = require('./engine');
 
 const {Logger} = require('./utils');
 const log = Logger({tag:'workflow-instance'});
@@ -49,33 +44,28 @@ class WorkflowInstance extends EventEmitter {
                 }
 
                 try {
-                    const dones = this.dones;
-                    const params = this.vars;
-                    dones.push(item);
-                    params[task] = {};
-                    params[task].data = vars || {};
-                    params[task].files = files || [];
-
-                    const next = this.engine.nextProcess(dones, params);
-                    if (next[0].isParallelGateway) {
-                        this.dones.push(item);
-                        return true;
-                    }
-                    await this.dbService.addOperation(this.id, task, vars, files || []);
+                    this.dones.push(item);
+                    this.vars[task] = {data: vars || {}, files: files || []};
+                    const next = this.engine.nextProcess(this.dones, this.vars);
+                    await this.dbService.addOperation(this.id, task, vars, files);
                     await this.dbService.updateInstance(this.id, this.vars);
-                    this.dones = [];
-                    this.vars = params;
-                    this.next = next;
-                    this._process();
+                    if (next.length >= 1 && !next[0].isParallelGateway) {
 
-                    if (this.hookers[task] && this.hookers[task].postHandler) {
-                        await this.hookers[task].postHandler(this.id, task, this.vars);
+                        this.dones = [];
+                        this.next = next;
+                        this._process();
                     }
-                    return true;
                 } catch (e) {
                     console.log(e);
+                    this.dones.pop();
+                    delete this.vars[task];
                     throw '提交的参数格式不正确';
                 }
+
+                if (this.hookers[task] && this.hookers[task].postHandler) {
+                    await this.hookers[task].postHandler(this.id, task, this.vars);
+                }
+                return;
             }
         }
         throw '流程不处于"' + task + '"阶段';
