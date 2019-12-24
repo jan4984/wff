@@ -142,7 +142,8 @@ function parse(xmlString){
         if(nodes[t] && !Array.isArray(nodes[t])){
             nodes[t] = [nodes[t]];
         }
-        nodes[t] && nodes[t].forEach(n=>{
+        if(!nodes[t]) nodes[t] = [];
+        nodes[t].forEach(n=>{
             if(n.bpmn_incoming && !Array.isArray(n.bpmn_incoming)){
                 n.bpmn_incoming = [n.bpmn_incoming];
             }
