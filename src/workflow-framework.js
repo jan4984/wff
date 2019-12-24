@@ -224,7 +224,7 @@ class WorkflowFramework {
                 await invokeHooker(hooker.preHandler);
                 const result = await invokeHooker(hooker.jobHandler);
                 const taskResult = {};
-                taskResult[task] = result;
+                taskResult[task] = {data:result};
                 hooker.postHandler && (await hooker.postHandler(instanceId, task, Object.assign({},vars,taskResult)));
                 return await complete.success(result);
             } catch (e) {
