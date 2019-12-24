@@ -223,7 +223,9 @@ class WorkflowFramework {
             try {
                 await invokeHooker(hooker.preHandler);
                 const result = await invokeHooker(hooker.jobHandler);
-                hooker.postHandler && (await hooker.postHandler(instanceId, task, Object.assign({},vars,result,)));
+                const taskResult = {};
+                taskResult[task.name] = result;
+                hooker.postHandler && (await hooker.postHandler(instanceId, task, Object.assign({},vars,taskResult)));
                 return await complete.success(result);
             } catch (e) {
                 console.log('exception in handler of', task, e);
