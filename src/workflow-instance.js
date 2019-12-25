@@ -81,7 +81,7 @@ class WorkflowInstance extends EventEmitter {
         this.next.forEach(task => {
             if (task.isServiceTask) {
                 if (!this.handlers.hasOwnProperty(task.name)) {
-                    log.warn('job', this.next.name, 'has no handler, instance id=', this.id);
+                    log.warn('job', this.next.name, 'has no handler, instance id', this.id);
                 } else {
                     const complete = {
                         success: this._success.bind(this, task),

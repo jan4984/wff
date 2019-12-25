@@ -1,0 +1,195 @@
+{
+    "tables": {
+        "files": {
+            "tableName": "files",
+            "schema": {
+                "id": {
+                    "primaryKey": true,
+                    "field": "id",
+                    "seqType": "Sequelize.STRING"
+                },
+                "attached": {
+                    "allowNull": false,
+                    "defaultValue": {
+                        "value": false
+                    },
+                    "field": "attached",
+                    "seqType": "Sequelize.BOOLEAN"
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "field": "createdAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "field": "updatedAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "instanceId": {
+                    "allowNull": true,
+                    "references": {
+                        "model": "instances",
+                        "key": "id"
+                    },
+                    "onDelete": "SET NULL",
+                    "onUpdate": "CASCADE",
+                    "field": "instanceId",
+                    "seqType": "Sequelize.STRING"
+                }
+            },
+            "indexes": []
+        },
+        "instances": {
+            "tableName": "instances",
+            "schema": {
+                "id": {
+                    "primaryKey": true,
+                    "field": "id",
+                    "seqType": "Sequelize.STRING"
+                },
+                "variables": {
+                    "allowNull": false,
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Object"
+                    },
+                    "field": "variables",
+                    "seqType": "Sequelize.JSON"
+                },
+                "status": {
+                    "allowNull": false,
+                    "defaultValue": {
+                        "value": "processing"
+                    },
+                    "field": "status",
+                    "seqType": "Sequelize.STRING"
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "field": "createdAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "field": "updatedAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "workflowId": {
+                    "allowNull": true,
+                    "references": {
+                        "model": "workflows",
+                        "key": "id"
+                    },
+                    "onDelete": "SET NULL",
+                    "onUpdate": "CASCADE",
+                    "field": "workflowId",
+                    "seqType": "Sequelize.INTEGER"
+                }
+            },
+            "indexes": []
+        },
+        "operations": {
+            "tableName": "operations",
+            "schema": {
+                "id": {
+                    "allowNull": false,
+                    "primaryKey": true,
+                    "autoIncrement": true,
+                    "field": "id",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "name": {
+                    "allowNull": false,
+                    "field": "name",
+                    "seqType": "Sequelize.STRING"
+                },
+                "data": {
+                    "allowNull": false,
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Object"
+                    },
+                    "field": "data",
+                    "seqType": "Sequelize.JSON"
+                },
+                "files": {
+                    "allowNull": true,
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Array"
+                    },
+                    "field": "files",
+                    "seqType": "Sequelize.JSON"
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "field": "createdAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "field": "updatedAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "instanceId": {
+                    "allowNull": true,
+                    "references": {
+                        "model": "instances",
+                        "key": "id"
+                    },
+                    "onDelete": "SET NULL",
+                    "onUpdate": "CASCADE",
+                    "field": "instanceId",
+                    "seqType": "Sequelize.STRING"
+                }
+            },
+            "indexes": []
+        },
+        "workflows": {
+            "tableName": "workflows",
+            "schema": {
+                "id": {
+                    "allowNull": false,
+                    "primaryKey": true,
+                    "autoIncrement": true,
+                    "field": "id",
+                    "seqType": "Sequelize.INTEGER"
+                },
+                "content": {
+                    "allowNull": false,
+                    "field": "content",
+                    "seqType": "Sequelize.TEXT"
+                },
+                "default": {
+                    "allowNull": false,
+                    "defaultValue": {
+                        "value": false
+                    },
+                    "field": "default",
+                    "seqType": "Sequelize.BOOLEAN"
+                },
+                "status": {
+                    "allowNull": false,
+                    "defaultValue": {
+                        "value": "normal"
+                    },
+                    "field": "status",
+                    "seqType": "Sequelize.STRING"
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "field": "createdAt",
+                    "seqType": "Sequelize.DATE"
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "field": "updatedAt",
+                    "seqType": "Sequelize.DATE"
+                }
+            },
+            "indexes": []
+        }
+    },
+    "revision": 1
+}

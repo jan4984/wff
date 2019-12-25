@@ -1,7 +1,6 @@
 const uuid = require('uuid/v4');
 const fs = require('fs');
 const crypto = require('crypto');
-const DBService = require('./db-service');
 const {OperationHistoryService} = require('./op-history-service');
 const {parse} = require('./engine');
 const WorkflowInstance = require('./workflow-instance');
@@ -26,12 +25,12 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async initialize(props) {
-        await DBService.get(props.dbInfo);
-        
+        log.info('loading workflows');
         for (const workflow of await this.dbService.getWorkflows()) {
             await this._addWorkflow(workflow);
         }
 
+        log.info('loading workflow instances');
         for (const instance of await this.dbService.getInstances()) {
             await this._addInstance(instance);
         }
@@ -44,9 +43,11 @@ class WorkflowFramework {
      * @returns {Promise<Number>} workflow id
      */
     async deployWorkflow(bpmnFile, def = true) {
+        log.info('deploying new workflow', bpmnFile);
         const content = fs.readFileSync(bpmnFile);
         const md5 = await this._getFileMd5(content);
         if (this.md5s.hasOwnProperty(md5)) {
+            log.info('deploying an existing workflow', bpmnFile, md5);
             return this.md5s[md5];
         } else {
             let workflow = await this.dbService.addWorkflow({content: content, default: def});
@@ -83,6 +84,8 @@ class WorkflowFramework {
         }
 
         !vars && (vars = {});
+        log.info('creating new workflow instance:', workflowId.toString(), JSON.stringify(vars));
+
         const instance = await this.dbService.addInstance({
             id: uuid(),
             workflowId: workflowId,
@@ -98,6 +101,7 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async deleteWorkflowInstance(instanceId) {
+        log.info('deleting workflow instance', instanceId);
         this._instanceCheck(instanceId);
         await this.dbService.deleteInstance(instanceId);
         delete this.processList[instanceId];
@@ -110,13 +114,16 @@ class WorkflowFramework {
      * @returns {Promise<Object>}
      */
     getWorkflowInstanceState(instanceId) {
+        let state = {};
         if (this.endList.hasOwnProperty(instanceId)) {
-            return {status: 'end', currentTasks: []};
+            state = {status: 'end', currentTasks: []};
         } else if (this.processList.hasOwnProperty(instanceId)) {
-            return {status: 'processing', currentTasks: this.processList[instanceId].getCurrentTasks()};
+            state = {status: 'processing', currentTasks: this.processList[instanceId].getCurrentTasks()};
         } else {
-            return {status: 'nonexistent'};
+            state = {status: 'nonexistent'};
         }
+        log.info('get workflow instance state', instanceId, JSON.stringify(state));
+        return state;
     }
 
     /*
@@ -128,6 +135,7 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async addOperation(instanceId, processName, data, files) {
+        log.info('add operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
         this._instanceCheck(instanceId);
         await this.processList[instanceId].message(processName, data, files);
     }
@@ -141,6 +149,7 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async recordOperation(instanceId, processName, data, files) {
+        log.info('record operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
         this._instanceCheck(instanceId);
         await this.dbService.addOperation(instanceId, processName, data, files);
     }

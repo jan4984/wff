@@ -1,5 +1,5 @@
 const WorkflowFramework = require('../src/workflow-framework');
-const DBService = require('../src/db-service');
+const {OperationHistoryService} = require('../src/op-history-service');
 const uuid = require('uuid/v4');
 
 const dbConfig = {
@@ -28,6 +28,7 @@ const hookers = {
 
 const wff = new WorkflowFramework(hookers);
 let wfi = null;
+let dbService = null;
 
 const sleep = async (ms)=> {
     return new Promise((resolve => setTimeout(resolve, ms)));
@@ -35,7 +36,7 @@ const sleep = async (ms)=> {
 
 describe('__tests__ workflow framework', ()=> {
     beforeAll(async () => {
-        await DBService.get(dbConfig);
+        dbService = new OperationHistoryService();
         await wff.initialize();
     });
 
@@ -84,7 +85,7 @@ describe('__tests__ workflow framework', ()=> {
         var vars = {商务确认: {data: {status: "等待"}}};
         const result = await wff.createWorkflowInstance(vars);
         expect(result).toBeTruthy();
-        const verify = await DBService.models.WFI.findOne({where: {id: result}});
+        const verify = await dbService.getInstanceById(result);
         expect(verify.variables).toEqual(vars);
         wfi = result;
     }, 10000);

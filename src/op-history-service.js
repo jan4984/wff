@@ -1,7 +1,7 @@
-const {Logger} = require('./utils');
-const {Sequelize, Op} = require('sequelize');
-const DBSerivce = require('./db-service');
+const db = require('../models');
+const Op = db.Sequelize.Op;
 
+const {Logger} = require('./utils');
 const log = Logger({tag:'operation-history-service'});
 
 class OperationHistoryService {
@@ -10,31 +10,30 @@ class OperationHistoryService {
     }
 
     async getWorkflows() {
-        return DBSerivce.models.WF.findAll({where: {status: {[Op.ne]: 'deleted'}}});
+        return db.workflow.findAll({where: {status: {[Op.ne]: 'deleted'}}});
     }
 
     async addWorkflow(workflow) {
-        const db = await DBSerivce.get();
-        return db.transaction(t => {
-            return (workflow.default ? DBSerivce.models.WF.update({default: false}, {where: {}, transaction: t}) : Promise.resolve())
-                .then(() => { return DBSerivce.models.WF.create(workflow, {transaction: t}) });
+        return db.sequelize.transaction(t => {
+            return (workflow.default ? db.workflow.update({default: false}, {where: {}, transaction: t}) : Promise.resolve())
+                .then(() => { return db.workflow.create(workflow, {transaction: t}) });
         });
     }
 
     async deleteWorkflow(workflowId) {
-        return DBSerivce.models.WF.update({status: 'deleted'}, {where: {id: workflowId}});
+        return db.workflow.update({status: 'deleted'}, {where: {id: workflowId}});
     }
 
     async getInstances() {
-        return DBSerivce.models.WFI.findAll({where: {status: {[Op.ne]: 'deleted'}}});
+        return db.instance.findAll({where: {status: {[Op.ne]: 'deleted'}}});
     }
 
     async getInstancesByWorkflowId() {
-        return DBSerivce.models.WFI.findAll({})
+        return db.instance.WFI.findAll({})
     }
 
     async getInstanceById(instanceId) {
-        return DBSerivce.models.WFI.findOne({where: {id: instanceId}});
+        return db.instance.findOne({where: {id: instanceId}});
     }
 
     async getInstancesByWorkflowId(workflowId) {
@@ -42,27 +41,27 @@ class OperationHistoryService {
     }
 
     async getOperationsByInstanceId(instanceId) {
-        return DBSerivce.models.OP.findAll({where: {instanceId: instanceId}});
+        return db.operation.findAll({where: {instanceId: instanceId}});
     }
 
     async addInstance(instance) {
-        return DBSerivce.models.WFI.create(instance);
+        return db.instance.create(instance);
     }
 
     async updateInstance(instanceId, vars) {
-        return DBSerivce.models.WFI.update({variables: vars}, {where: {id: instanceId}});
+        return db.instance.update({variables: vars}, {where: {id: instanceId}});
     }
 
     async deleteInstance(instanceId) {
-        return DBSerivce.models.WFI.update({status: 'deleted'}, {where: {id: instanceId}});
+        return db.instance.update({status: 'deleted'}, {where: {id: instanceId}});
     }
 
     async endInstance(instanceId) {
-        return DBSerivce.models.WFI.update({status: 'end'}, {where: {id: instanceId}});
+        return db.instance.update({status: 'end'}, {where: {id: instanceId}});
     }
 
     async getLastOperationByInstanceId(instanceId) {
-        return DBSerivce.models.OP.findOne({
+        return db.operation.findOne({
             where: {instanceId: instanceId},
             order: [['createdAt', 'DESC']],
             limit: 1
@@ -70,7 +69,7 @@ class OperationHistoryService {
     }
 
     async getOperationByInstanceId(instanceId, processName) {
-        return DBSerivce.models.OP.findOne({
+        return db.operation.findOne({
             where: {instanceId: instanceId, name: processName},
             order: [['createdAt', 'DESC']],
             limit: 1
@@ -78,27 +77,27 @@ class OperationHistoryService {
     }
 
     async getDefaultWorkflow() {
-        return DBSerivce.models.WF.findOne({where: {default: true}});
+        return db.workflow.findOne({where: {default: true}});
     }
 
     async addWorkflowInstance(instanceKey, workflowId) {
-        return DBSerivce.models.WFI.create({id: instanceKey, workflowId: workflowId});
+        return db.instance.create({id: instanceKey, workflowId: workflowId});
     }
 
     async removeWorkflowInstance(instanceKey) {
-        return DBSerivce.models.WFI.update({deleted: true}, {where: {id: instanceKey}});
+        return db.instance.update({deleted: true}, {where: {id: instanceKey}});
     }
 
     async getWorkflowInstanceByKey(instanceKey) {
-        return DBSerivce.models.WFI.findOne({where: {id: instanceKey}});
+        return db.instance.findOne({where: {id: instanceKey}});
     }
 
     async getInstanceById(instanceId) {
-        return DBSerivce.models.WFI.findOne({where: {id: instanceId}});
+        return db.instance.findOne({where: {id: instanceId}});
     }
 
     // async addFile(instanceKey, file) {
-    //     return DBSerivce.models.File.create({path: file, workflowInstanceId: instanceKey});
+    //     return db.file.create({path: file, workflowInstanceId: instanceKey});
     // }
 
     // async addOperation(instanceKey, serviceType, fileList, data) {
@@ -120,7 +119,7 @@ class OperationHistoryService {
     //         if (fileList.length === 0) {
     //             fileAction = Promise.resolve();
     //         } else {
-    //             fileAction = DBSerivce.models.File.update({
+    //             fileAction = db.file.update({
     //                 attached: true,
     //             }, {
     //                 where: {
@@ -130,7 +129,7 @@ class OperationHistoryService {
     //                 transaction: t
     //             });
     //         }
-    //         return fileAction.then(() => DBSerivce.models.OP.create({
+    //         return fileAction.then(() => db.operation.create({
     //             operationName: serviceType,
     //             operationData: data,
     //             workflowInstanceId: instanceKey,
@@ -153,7 +152,7 @@ class OperationHistoryService {
             throw 'no workflow instance id specified';
         }
 
-        const ops = await DBSerivce.models.OP.findAll({
+        const ops = await db.operation.findAll({
             where:{
                 workflowInstanceId: wfiId
             },
@@ -172,12 +171,12 @@ class OperationHistoryService {
         }
 
         files || (files = []);
-        const record = await (await DBSerivce.get()).transaction(t => {
+        const record = await (db.sequelize.transaction(t => {
             let fileAction;
             if (files.length === 0) {
                 fileAction = Promise.resolve();
             } else {
-                fileAction = DBSerivce.models.File.update({
+                fileAction = db.file.update({
                     attached: true,
                 }, {
                     where: {
@@ -187,7 +186,7 @@ class OperationHistoryService {
                     transaction: t
                 });
             }
-            return fileAction.then(() => DBSerivce.models.OP.create({
+            return fileAction.then(() => db.operation.create({
                 name: processName,
                 data: data,
                 files: files,
@@ -195,7 +194,7 @@ class OperationHistoryService {
             }, {
                 transaction: t
             }));
-        });
+        }));
         return record;
     }
 
@@ -203,7 +202,7 @@ class OperationHistoryService {
         if (!instanceKey) {
             throw 'no workflow instance key specified';
         } else if (processName) {
-            let result = await DBSerivce.models.OP.findOne({
+            let result = await db.operation.findOne({
                 attributes: ['data', 'files', 'createdAt'],
                 where: {
                     instanceId: instanceKey,
@@ -220,7 +219,7 @@ class OperationHistoryService {
             throw 'no workflow instance specified';
         }
 
-        const removedCount = await DBSerivce.models.File.destroy({
+        const removedCount = await db.file.destroy({
             where:{
                 [Op.and]:[{workflowInstanceId:wfiId}, {attached: false}]
             }
@@ -247,7 +246,7 @@ class OperationHistoryService {
                 [Op.and] : [where.where, {workflowInstanceId: wfiId}]
             };
         }
-        const ops = await DBSerivce.models.OP.findAll(where);
+        const ops = await db.operation.findAll(where);
         return ops;
     }
 }
