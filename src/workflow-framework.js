@@ -77,7 +77,7 @@ class WorkflowFramework {
      * @param {Number} [workflowId] - Workflow id, use default workflow while it is null
      * @returns {Promise<String>} workflow instance id
      */
-    async createWorkflowInstance(vars, workflowId) {
+    async createWorkflowInstance(vars, workflowId, id) {
         workflowId || (workflowId = this.defaultWorkflowId);
         if (!this.workflows.hasOwnProperty(workflowId)) {
             throw 'not find workflow with id ' + workflowId;
@@ -87,7 +87,7 @@ class WorkflowFramework {
         log.info('creating new workflow instance:', workflowId.toString(), JSON.stringify(vars));
 
         const instance = await this.dbService.addInstance({
-            id: uuid(),
+            id: id || uuid(),
             workflowId: workflowId,
             variables: vars
         });
