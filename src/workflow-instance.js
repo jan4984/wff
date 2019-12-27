@@ -147,6 +147,10 @@ class WorkflowInstance extends EventEmitter {
         this.emit('end', instance.id);
     }
 
+    async _peek() {
+        engine.nextProcess([], vars);
+    }
+
     async _success(task, vars) {
         // await this.dbService.addOperation(this.id, task.name, vars);
         // this.vars[task.name] = {};
