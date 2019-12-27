@@ -57,6 +57,15 @@
                     "field": "variables",
                     "seqType": "Sequelize.JSON"
                 },
+                "lastTasks": {
+                    "allowNull": false,
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Array"
+                    },
+                    "field": "lastTasks",
+                    "seqType": "Sequelize.JSON"
+                },
                 "status": {
                     "allowNull": false,
                     "defaultValue": {
@@ -144,7 +153,19 @@
                     "seqType": "Sequelize.STRING"
                 }
             },
-            "indexes": []
+            "indexes": {
+                "d9847bf20fa8e3339d1d95101a3cc146d9cff3f8": {
+                    "unique": false,
+                    "fields": [
+                        "instanceId"
+                    ],
+                    "name": "operations_instance_id",
+                    "options": {
+                        "indexName": "operations_instance_id",
+                        "name": "operations_instance_id"
+                    }
+                }
+            }
         },
         "workflows": {
             "tableName": "workflows",
@@ -160,6 +181,14 @@
                     "allowNull": false,
                     "field": "content",
                     "seqType": "Sequelize.TEXT"
+                },
+                "md5": {
+                    "allowNull": true,
+                    "defaultValue": {
+                        "value": ""
+                    },
+                    "field": "md5",
+                    "seqType": "Sequelize.STRING"
                 },
                 "default": {
                     "allowNull": false,
@@ -188,8 +217,22 @@
                     "seqType": "Sequelize.DATE"
                 }
             },
-            "indexes": []
+            "indexes": {
+                "17e1bfc97d8832d4a8ca57149dd3c366794dc02a": {
+                    "unique": true,
+                    "fields": [
+                        "md5"
+                    ],
+                    "name": "workflows_md5",
+                    "options": {
+                        "indexName": "workflows_md5",
+                        "name": "workflows_md5",
+                        "indicesType": "UNIQUE",
+                        "type": "UNIQUE"
+                    }
+                }
+            }
         }
     },
-    "revision": 1
+    "revision": 2
 }

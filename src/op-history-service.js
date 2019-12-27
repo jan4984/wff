@@ -13,6 +13,14 @@ class OperationHistoryService {
         return db.workflow.findAll({where: {status: {[Op.ne]: 'deleted'}}});
     }
 
+    async getWorkflowById(workflowId) {
+        return db.workflow.findOne({where: {id: workflowId}});
+    }
+
+    async getDefaultWorkflow() {
+        return db.workflow.findOne({where: {default: true}});
+    }
+
     async addWorkflow(workflow) {
         return db.sequelize.transaction(t => {
             return (workflow.default ? db.workflow.update({default: false}, {where: {}, transaction: t}) : Promise.resolve())
@@ -48,8 +56,8 @@ class OperationHistoryService {
         return db.instance.create(instance);
     }
 
-    async updateInstance(instanceId, vars) {
-        return db.instance.update({variables: vars}, {where: {id: instanceId}});
+    async updateInstance(instanceId, values) {
+        return db.instance.update(values, {where: {id: instanceId}});
     }
 
     async deleteInstance(instanceId) {
@@ -163,39 +171,13 @@ class OperationHistoryService {
         return ops;
     }
 
-    async addOperation(instanceKey, processName, data, files) {
-        if (!instanceKey) {
-            throw 'no workflow instance key specified';
-        } else if (!processName) {
+    async addOperation(operation) {
+        if (!operation.instanceId) {
+            throw 'no workflow instance id specified';
+        } else if (!operation.name) {
             throw 'no process name specified';
         }
-
-        files || (files = []);
-        const record = await (db.sequelize.transaction(t => {
-            let fileAction;
-            if (files.length === 0) {
-                fileAction = Promise.resolve();
-            } else {
-                fileAction = db.file.update({
-                    attached: true,
-                }, {
-                    where: {
-                        id: {[Op.in]: files},
-                        instanceId: instanceKey
-                    },
-                    transaction: t
-                });
-            }
-            return fileAction.then(() => db.operation.create({
-                name: processName,
-                data: data,
-                files: files,
-                instanceId: instanceKey,
-            }, {
-                transaction: t
-            }));
-        }));
-        return record;
+        return db.operation.create(operation);
     }
 
     async findOperationByInstanceKey(instanceKey, processName) {
