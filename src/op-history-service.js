@@ -17,6 +17,10 @@ class OperationHistoryService {
         return db.workflow.findOne({where: {id: workflowId}});
     }
 
+    async getWorkflow(option) {
+        return db.workflow.findOne({where: option});
+    }
+
     async getDefaultWorkflow() {
         return db.workflow.findOne({where: {default: true}});
     }

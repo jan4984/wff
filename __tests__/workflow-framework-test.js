@@ -73,15 +73,12 @@ describe('__tests__ workflow framework', ()=> {
     // });
 
     it('deploy workflow test', async ()=> {
-        const result = await wff.deployWorkflow('d:/cae2.bpmn');
-        expect(result).toBeTruthy();
-        console.log('new workflow', result);
+        let result1 = await wff.deployWorkflow('d:/cae2.bpmn');
+        expect(result1).toBeTruthy();
+        console.log('new workflow', result1);
 
-        await wff.deployWorkflow('d:/cae2.bpmn').catch(e=>{
-            if (!e.toString().includes('重复键违反唯一约束')) {
-                throw e;
-            }
-        });
+        let result2 = await wff.deployWorkflow('d:/cae2.bpmn');
+        expect(result1).toEqual(result2);
     });
 
     it('create workflow instance test', async ()=> {

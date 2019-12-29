@@ -36,7 +36,14 @@ class WorkflowFramework {
         log.info('deploying new workflow', bpmnFile);
         const content = fs.readFileSync(bpmnFile);
         const md5 = await this._getFileMd5(content);
-        let workflow = await this.dbService.addWorkflow({content, md5, default: def});
+
+        let workflow = await this.dbService.addWorkflow({content, md5, default: def})
+            .catch(e => {
+                if (!e.toString().includes('重复键违反唯一约束')) {
+                    throw e;
+                }
+            });
+        workflow = await this.dbService.getWorkflow({md5});
         this._addHandler(workflow);
         return workflow.id;
     }
