@@ -106,11 +106,11 @@ class WorkflowInstance extends EventEmitter {
     }
 
     async _onReceiveTask(engine, instance, task, vars, files) {
-        if (this.hookers[task] && this.hookers[task].preHandler) {
-            await this.hookers[task].preHandler(instance.id, task, vars);
-        }
-
         try {
+            if (this.hookers[task] && this.hookers[task].preHandler) {
+                await this.hookers[task].preHandler(instance.id, task, instance.variables);
+            }
+
             const dones = [task].concat(instance.currentTasks).map((v, i) => { return engine.getTaskByName(v)});
             const instVars = Object.assign(instance.variables, {[task]: {data: vars, files: files}});
             const next = engine.nextProcess(dones, instVars);
@@ -138,13 +138,13 @@ class WorkflowInstance extends EventEmitter {
             });
 
             this.process(instance.id);
+
+            if (this.hookers[task] && this.hookers[task].postHandler) {
+                await this.hookers[task].postHandler(instance.id, task, instVars);
+            }
         } catch (e) {
             console.log(e);
             throw '提交的参数格式不正确';
-        }
-
-        if (this.hookers[task] && this.hookers[task].postHandler) {
-            await this.hookers[task].postHandler(instance.id, task, vars);
         }
     }
 
@@ -156,7 +156,8 @@ class WorkflowInstance extends EventEmitter {
                 success: this._success.bind(this, engine, instance, task),
                 failure: this._failure.bind(this, engine, instance, task)
             };
-            this.handlers[task](instance.id, task, vars, complete)
+            const instVars = Object.assign(instance.variables, {[task]: {data: vars}});
+            this.handlers[task](instance.id, task, instVars, complete)
                 .catch(e => complete.failure(e));
         }
     }
