@@ -85,16 +85,21 @@ describe('__tests__ workflow framework', ()=> {
     });
 
     it('create workflow instance test', async ()=> {
-        var vars = {商务确认: {data: {status: "等待"}}};
+        const vars = {商务确认: {data: {status: "等待"}}};
         const result = await wff.createWorkflowInstance(vars);
         expect(result).toBeTruthy();
         const verify = await dbService.getInstanceById(result);
         expect(verify.variables).toEqual(vars);
         wfi = result;
-    }, 10000);
+        console.log(wfi);
+    });
 
     it('flow test', async ()=> {
-        wfi = 'f2bb46db-1e37-44c2-9d6d-96ecabbd2961';
+        const vars = {商务确认: {data: {status: "等待"}}};
+        let result = await wff.createWorkflowInstance(vars);
+        expect(result).toBeTruthy();
+
+        let wfi = result;
         await wff.addOperation(wfi, '商务确认', {status: '通过'}).catch(e => {
             if (!e.toString().includes('流程不处于')) {
                 throw e;
@@ -104,7 +109,7 @@ describe('__tests__ workflow framework', ()=> {
         const var1 = {key1: 'value1'};
         const file1 = ['123', '456'];
         await wff.addOperation(wfi, '硬件项目资料', var1, file1);
-        const result = await wff.getOperation(wfi, '硬件项目资料');
+        result = await wff.getOperation(wfi, '硬件项目资料');
         expect(var1).toEqual(result.data);
         expect(file1).toEqual(result.files);
         await sleep(50);
@@ -150,8 +155,7 @@ describe('__tests__ workflow framework', ()=> {
         await wff.addOperation(wfi, '中台归档', {key10: 'value10'});
         await sleep(50);
 
-        const sta = wff.getWorkflowInstanceState(wfi);
+        const sta = await wff.getWorkflowInstanceState(wfi);
         expect(sta.status).toEqual('end');
-
-    }, 10000)
+    }, 10000000)
 });

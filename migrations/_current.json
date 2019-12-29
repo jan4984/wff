@@ -58,12 +58,21 @@
                     "seqType": "Sequelize.JSON"
                 },
                 "lastTasks": {
-                    "allowNull": false,
+                    "allowNull": true,
                     "defaultValue": {
                         "internal": true,
                         "value": "Sequelize.Array"
                     },
                     "field": "lastTasks",
+                    "seqType": "Sequelize.JSON"
+                },
+                "currentTasks": {
+                    "allowNull": true,
+                    "defaultValue": {
+                        "internal": true,
+                        "value": "Sequelize.Array"
+                    },
+                    "field": "currentTasks",
                     "seqType": "Sequelize.JSON"
                 },
                 "status": {
@@ -234,5 +243,5 @@
             }
         }
     },
-    "revision": 2
+    "revision": 3
 }

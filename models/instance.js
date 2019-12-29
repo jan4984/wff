@@ -3,7 +3,8 @@ module.exports = (sequelize, DataTypes) => {
   const instance = sequelize.define('instance', {
     id: {type: DataTypes.STRING, primaryKey: true},
     variables: {type: DataTypes.JSON, allowNull: false, defaultValue: {}},
-    lastTasks: {type: DataTypes.JSON, allowNull: false, defaultValue: []},
+    lastTasks: {type: DataTypes.JSON, allowNull: true, defaultValue: []},
+    currentTasks: {type: DataTypes.JSON, allowNull: true, defaultValue: []},
     status: {type: DataTypes.STRING, allowNull: false, defaultValue: 'processing'}
   }, {});
   instance.associate = function(models) {

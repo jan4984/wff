@@ -6,6 +6,7 @@ var Sequelize = require('sequelize');
  * Actions summary:
  *
  * addColumn "lastTasks" to table "instances"
+ * addColumn "currentTasks" to table "instances"
  * addColumn "md5" to table "workflows"
  * addIndex "operations_instance_id" to table "operations"
  * addIndex "workflows_md5" to table "workflows"
@@ -29,7 +30,23 @@ var migrationCommands = function(transaction) {
                     "type": Sequelize.JSON,
                     "field": "lastTasks",
                     "defaultValue": Sequelize.Array,
-                    "allowNull": false
+                    "allowNull": true
+                },
+                {
+                    transaction: transaction
+                }
+            ]
+        },
+        {
+            fn: "addColumn",
+            params: [
+                "instances",
+                "currentTasks",
+                {
+                    "type": Sequelize.JSON,
+                    "field": "currentTasks",
+                    "defaultValue": Sequelize.Array,
+                    "allowNull": true
                 },
                 {
                     transaction: transaction
@@ -106,6 +123,16 @@ var rollbackCommands = function(transaction) {
             params: [
                 "instances",
                 "lastTasks",
+                {
+                    transaction: transaction
+                }
+            ]
+        },
+        {
+            fn: "removeColumn",
+            params: [
+                "instances",
+                "currentTasks",
                 {
                     transaction: transaction
                 }
