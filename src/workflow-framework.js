@@ -11,12 +11,8 @@ const log = Logger({tag:'workflow-framework'});
 class WorkflowFramework {
     constructor(hookers) {
         this.dbService = new OperationHistoryService();
-        this.workflows = {};
-        this.processList = {};
-        this.endList = {};
-        this.md5s = {};
         this.hookers = hookers || {};
-        this.defaultWorkflowId = null;
+        this.wfi = new WorkflowInstance(this.hookers);
     }
 
     /*
@@ -25,14 +21,8 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async initialize(props) {
-        log.info('loading workflows');
         for (const workflow of await this.dbService.getWorkflows()) {
-            await this._addWorkflow(workflow);
-        }
-
-        log.info('loading workflow instances');
-        for (const instance of await this.dbService.getInstances()) {
-            await this._addInstance(instance);
+            this._addHandler(workflow);
         }
     }
 
@@ -46,14 +36,9 @@ class WorkflowFramework {
         log.info('deploying new workflow', bpmnFile);
         const content = fs.readFileSync(bpmnFile);
         const md5 = await this._getFileMd5(content);
-        if (this.md5s.hasOwnProperty(md5)) {
-            log.info('deploying an existing workflow', bpmnFile, md5);
-            return this.md5s[md5];
-        } else {
-            let workflow = await this.dbService.addWorkflow({content: content, default: def});
-            await this._addWorkflow(workflow);
-            return workflow.id;
-        }
+        let workflow = await this.dbService.addWorkflow({content, md5, default: def});
+        this._addHandler(workflow);
+        return workflow.id;
     }
 
     /*
@@ -78,20 +63,22 @@ class WorkflowFramework {
      * @returns {Promise<String>} workflow instance id
      */
     async createWorkflowInstance(vars, workflowId, id) {
-        workflowId || (workflowId = this.defaultWorkflowId);
-        if (!this.workflows.hasOwnProperty(workflowId)) {
-            throw 'not find workflow with id ' + workflowId;
-        }
-
         !vars && (vars = {});
-        log.info('creating new workflow instance:', workflowId.toString(), JSON.stringify(vars));
+        log.info('creating new workflow instance:', workflowId, JSON.stringify(vars));
+
+        let workflow = workflowId
+            ? await this.dbService.getWorkflowById(workflowId)
+            : await this.dbService.getDefaultWorkflow();
+        if (!workflow) {
+            throw 'workflow with id ' + workflowId.toString() + ' does not exist';
+        }
 
         const instance = await this.dbService.addInstance({
             id: id || uuid(),
             workflowId: workflowId,
             variables: vars
         });
-        await this._addInstance(instance);
+        await this.wfi.process(instance.id);
         return instance.id;
     }
 
@@ -113,15 +100,15 @@ class WorkflowFramework {
      * @param {String} instanceId - Workflow instance id
      * @returns {Promise<Object>}
      */
-    getWorkflowInstanceState(instanceId) {
+    async getWorkflowInstanceState(instanceId) {
         let state = {};
-        if (this.endList.hasOwnProperty(instanceId)) {
-            state = {status: 'end', currentTasks: []};
-        } else if (this.processList.hasOwnProperty(instanceId)) {
-            state = {status: 'processing', currentTasks: this.processList[instanceId].getCurrentTasks()};
-        } else {
+        let instance = await this.dbService.getInstanceById(instanceId);
+        if (!instance) {
             state = {status: 'nonexistent'};
+        } else {
+            state = {status: instance.status, currentTasks: instance.currentTasks};
         }
+
         log.info('get workflow instance state', instanceId, JSON.stringify(state));
         return state;
     }
@@ -135,9 +122,10 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async addOperation(instanceId, processName, data, files) {
+        data || (data = {});
+        files || (files = []);
         log.info('add operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
-        this._instanceCheck(instanceId);
-        await this.processList[instanceId].message(processName, data, files);
+        await this.wfi.process(instanceId, processName, data, files);
     }
 
     /*
@@ -149,8 +137,9 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async recordOperation(instanceId, processName, data, files) {
+        !data || (data = {});
+        !files || (files = []);
         log.info('record operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
-        this._instanceCheck(instanceId);
         await this.dbService.addOperation(instanceId, processName, data, files);
     }
 
@@ -164,58 +153,32 @@ class WorkflowFramework {
         return this.dbService.getOperationByInstanceId(instanceId, processName);
     }
 
-    async _addWorkflow(workflow) {
-        try {
-            const md5 = await this._getFileMd5(workflow.content);
-            const engine = parse(workflow.content);
-            const handlers = this._addHandler(engine);
-            this.workflows[workflow.id] = {engine: engine, handlers: handlers};
-            this.md5s[md5] = workflow.id;
-            workflow.default && (this.defaultWorkflowId = workflow.id);
-        } catch (e) {
-            console.log(e);
-        }
-    }
+    // async _addWorkflow(workflow) {
+    //     try {
+    //         const md5 = await this._getFileMd5(workflow.content);
+    //         const engine = parse(workflow.content);
+    //         const handlers = this._addHandler(engine);
+    //         this.workflows[workflow.id] = {engine: engine, handlers: handlers};
+    //         this.md5s[md5] = workflow.id;
+    //         workflow.default && (this.defaultWorkflowId = workflow.id);
+    //     } catch (e) {
+    //         console.log(e);
+    //     }
+    // }
 
-    _addHandler(engine) {
-        const handlers = {};
+    _addHandler(workflow) {
+        const engine = parse(workflow.content);
         engine.getTasks().forEach(task => {
             if (task.isServiceTask) {
-                handlers[task.name] = this._handler.bind(this);
+                this.wfi.addHandler(task.name, this._handler.bind(this));
             }
         });
-        return handlers;
-    }
-
-    async _addInstance(instance) {
-        if (instance.status === 'end') {
-            this.endList[instance.id] = null;
-        } else {
-            const workflow = this.workflows[instance.workflowId];
-            const wfi = new WorkflowInstance(instance.id, workflow, this.hookers);
-            await wfi.initialize();
-            this.processList[instance.id] = wfi;
-            wfi.on('end', this._onInstanceEnd.bind(this));
-        }
-    }
-
-    async _instanceCheck(instanceId) {
-        if (this.endList.hasOwnProperty(instanceId)) {
-            throw 'workflow instance is completed';
-        } else if (!this.processList.hasOwnProperty(instanceId)) {
-            throw 'workflow instance does not exit';
-        }
     }
 
     async _getFileMd5(data) {
         var fsHash = crypto.createHash('md5');
         fsHash.update(data);
         return fsHash.digest('hex');
-    }
-
-    _onInstanceEnd(instanceId) {
-        this.endList[instanceId] = null;
-        delete this.processList[instanceId];
     }
 
     async _handler(instanceId, task, vars, complete) {

@@ -4,8 +4,15 @@ module.exports = (sequelize, DataTypes) => {
     name: {type: DataTypes.STRING, allowNull: false},
     data: {type: DataTypes.JSON, allowNull: false, defaultValue: {}},
     files: {type: DataTypes.JSON, allowNull: true, defaultValue: []},
-  }, {});
-  operation.associate = function(models) {
+  }, {
+    indexes: [
+      {
+        unique: false,
+        fields: ['instanceId']
+      }
+    ]
+  });
+  operation.associate = function (models) {
     // associations can be defined here
     operation.belongsTo(models.instance);
   };

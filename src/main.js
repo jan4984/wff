@@ -1,6 +1,13 @@
-const {WorkflowFramework, DBService} = require('../index');
+//const {WorkflowFramework, DBService} = require('../index');
 //const WorkflowFramework = require('./workflow-framework');
 const readline = require('readline');
+
+
+const p1 = 'abc';
+const p2 = {[p1]: 'dddd'};
+const p3 = {lest: 'dsfsdfsd'};
+console.log(p2);
+console.log(p3);
 
 const rl = readline.createInterface({
     input: process.stdin,
