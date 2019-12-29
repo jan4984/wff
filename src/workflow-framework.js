@@ -75,7 +75,7 @@ class WorkflowFramework {
 
         const instance = await this.dbService.addInstance({
             id: id || uuid(),
-            workflowId: workflowId,
+            workflowId: workflow.id,
             variables: vars
         });
         await this.wfi.process(instance.id);
