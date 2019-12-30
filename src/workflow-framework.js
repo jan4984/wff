@@ -13,7 +13,7 @@ class WorkflowFramework {
         this.dbService = new OperationHistoryService();
         this.hookers = hookers || {};
         this.wfi = new WorkflowInstance(this.hookers);
-        console.log('workflowframework v1.0.0');
+        console.log('workflowframework v1.0.1');
     }
 
     /*
