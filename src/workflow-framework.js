@@ -13,7 +13,7 @@ class WorkflowFramework {
         this.dbService = new OperationHistoryService();
         this.hookers = hookers || {};
         this.wfi = new WorkflowInstance(this.hookers);
-        log.info('workflowframework v1.0.0');
+        console.log('workflowframework v1.0.0');
     }
 
     /*
@@ -34,17 +34,20 @@ class WorkflowFramework {
      * @returns {Promise<Number>} workflow id
      */
     async deployWorkflow(bpmnFile, def = true) {
-        log.info('deploying new workflow', bpmnFile);
+        console.log('deploying new workflow', bpmnFile);
         const content = fs.readFileSync(bpmnFile);
         const md5 = await this._getFileMd5(content);
 
         let workflow = await this.dbService.addWorkflow({content, md5, default: def})
             .catch(e => {
-                if (!e.toString().includes('重复键违反唯一约束')) {
+                console.error('error in addworkflow', e);
+                if (e.name !== 'SequelizeUniqueConstraintError') {
                     throw e;
                 }
             });
-        workflow = await this.dbService.getWorkflow({md5});
+        if (!workflow) {
+            workflow = await this.dbService.getWorkflow({md5});
+        }
         this._addHandler(workflow);
         return workflow.id;
     }
@@ -72,7 +75,7 @@ class WorkflowFramework {
      */
     async createWorkflowInstance(vars, workflowId, id) {
         !vars && (vars = {});
-        log.info('creating new workflow instance:', workflowId, JSON.stringify(vars));
+        console.log('creating new workflow instance:', workflowId, JSON.stringify(vars));
 
         let workflow = workflowId
             ? await this.dbService.getWorkflowById(workflowId)
@@ -96,7 +99,7 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async deleteWorkflowInstance(instanceId) {
-        log.info('deleting workflow instance', instanceId);
+        console.log('deleting workflow instance', instanceId);
         this._instanceCheck(instanceId);
         await this.dbService.deleteInstance(instanceId);
         delete this.processList[instanceId];
@@ -117,7 +120,7 @@ class WorkflowFramework {
             state = {status: instance.status, currentTasks: instance.currentTasks};
         }
 
-        log.info('get workflow instance state', instanceId, JSON.stringify(state));
+        console.log('get workflow instance state', instanceId, JSON.stringify(state));
         return state;
     }
 
@@ -132,7 +135,7 @@ class WorkflowFramework {
     async addOperation(instanceId, processName, data, files) {
         data || (data = {});
         files || (files = []);
-        log.info('add operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
+        console.log('add operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
         await this.wfi.process(instanceId, processName, data, files);
     }
 
@@ -147,7 +150,7 @@ class WorkflowFramework {
     async recordOperation(instanceId, processName, data, files) {
         !data || (data = {});
         !files || (files = []);
-        log.info('record operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
+        console.log('record operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
         await this.dbService.addOperation(instanceId, processName, data, files);
     }
 
