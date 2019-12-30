@@ -148,10 +148,15 @@ class WorkflowFramework {
      * @returns {Promise<>}
      */
     async recordOperation(instanceId, processName, data, files) {
-        !data || (data = {});
-        !files || (files = []);
+        data || (data = {});
+        files || (files = []);
         console.log('record operation', instanceId, processName, JSON.stringify(data), JSON.stringify(files));
-        await this.dbService.addOperation(instanceId, processName, data, files);
+        await this.dbService.addOperation({
+            name: processName,
+            data: data,
+            files: files,
+            instanceId: instanceId
+        });
     }
 
     /*
